@@ -44,34 +44,43 @@ static const size_t hash_sizes[] = {
 };
 
 int main() {
+    // initialize file and structures
     FILE* file = fopen("input.txt", "r");
     struct ZHashTable *hash_table;
     hash_table = zcreate_hash_table();
     
+    // initialize variables
     char read[20];
     char signature[MMER_SIZE + 1];
+    int signature_index;
     char mmer[MMER_SIZE + 1];
     int i;
     int pow_del = 64;
     int insert_point = 0;
-    // get reads from file
+    
+    // get all the reads from file
+    // expecting read of length less than 20
     while (fgets(read, 20, file) != NULL) {
-        // find signature for read
+
+        // pre process and store read
         int len = strlen(read);
         read[--len] = '\0';
         char* store = (char*) malloc(sizeof(char)*len+1);
         strncpy(store, read, len + 1);
 
-        // initializer mmer counter
+        // initializer mmer counter, mmer and signature buffers
         for (i=0; i < MMER_SIZE; i++) {
             mmer[i] = 'Z';
         }
         mmer[MMER_SIZE] = '\0';
         signature[MMER_SIZE] = '\0';
-
         unsigned int mer_count = 0;
         int score = -85;
         int max_score = score;
+
+        // iterate over read to find best mmer of length MMER_SIZE
+        // storing mmer in a rotating array
+        // array with best score is the signature
         for (i=0; i < len; i++) {
             score -= getval(mmer[mer_count])*pow_del;
             score *= MMER_SIZE;
@@ -79,16 +88,16 @@ int main() {
             mmer[mer_count] = read[i];
             if (score > max_score) {
                 max_score = score;
-                insert_point = mer_count + 1;
-                strncpy(signature, mmer, MMER_SIZE);
+                signature_index = i - MMER_SIZE + 1;
             }
             mer_count++;
             if (mer_count==MMER_SIZE) {
                 mer_count = 0;
             }
         }
-        // TODO fix mapping by sorting
-        rotating_sort(signature, MMER_SIZE, insert_point);
+
+        // extract signature from its position and store
+        strncpy(signature, &read[signature_index], MMER_SIZE);
         zhash_set(hash_table, signature, store);
     }
 

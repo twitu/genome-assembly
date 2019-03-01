@@ -150,81 +150,79 @@ void insert(Node root, Cstring str){
 
 	do{
 		i=getval(str->ptr[0]);
-		if(i != -1){
-			if(current->next.child[i]){
-                // next[i] != NULL
-				parent = current;
-				current = current->next.child[i];
-				match = checkcommon(str->ptr, str->new_len, current->bp);
-				if(match >= current->size) { 
-                    // follow current node
-                    erase_str(str, current->size);
-					continue;
-				} else {
-                    // part current node
-					Node temp = (Node) malloc(sizeof(node));
-					temp->size = match;
-					temp->bp = setbps(str->ptr, match);
-					temp->isleaf = 0;
-					erase_str(str, match);
-
-					for(j=0; j<4; j++) {
-                        temp->next.child[j]=NULL;
-                    }
-
-					parent->next.child[i] = temp;
-					parent = temp;
-					current->size -= match;
-					current->bp = reducebps(current->bp,match);
-					temp->next.child[current->bp.bp0] = current;
-					current=temp;
-					// str.erase(0,current->size);
-					//divide current node based on match;
-				}
-			}else{ 
-                // next[i] == NULL
-				current->next.child[i] = (Node) malloc(sizeof(node));
-				parent = current;
-				current = current ->next.child[i];
-				int size = str->new_len;
-
-				while(size>0){
-
-					if(size>4){
-						current-> size = 4;
-						current-> bp = setbps(str->ptr, 4);
-						current-> isleaf = 0;
-						erase_str(str, 4);
-
-						for(j=0;j<4;j++) {
-                            current->next.child[j]=NULL;
-                        }
-
-						size -= 4;
-						i = getval(str->ptr[0]);
-
-						current->next.child[i] = (Node) malloc(sizeof(node));
-						parent = current;
-						current = current->next.child[i];
-						continue;
-					}else{
-						current->size = size;
-						current->bp = setbps(str->ptr, size);
-						current->isleaf = 1;
-						erase_str(str, size);
-						current->next.leaf = (Leafnode) malloc(sizeof(leafnode));
-						size=0;
-						break;
-						//leaf node
-					}
-				}
-				break;
-			}
-		}else{
+		if(i == -1) {
 			printf("ERROR NOT POSSIBLE in insert\n");
 		}
-	} while(str->new_len > 0);
+		if(current->next.child[i]){
+			// next[i] != NULL
+			parent = current;
+			current = current->next.child[i];
+			match = checkcommon(str->ptr, str->new_len, current->bp);
+			if(match >= current->size) { 
+				// follow current node
+				erase_str(str, current->size);
+				continue;
+			} else {
+				// part current node
+				Node temp = (Node) malloc(sizeof(node));
+				temp->size = match;
+				temp->bp = setbps(str->ptr, match);
+				temp->isleaf = 0;
+				erase_str(str, match);
 
+				for(j=0; j<4; j++) {
+					temp->next.child[j]=NULL;
+				}
+
+				parent->next.child[i] = temp;
+				parent = temp;
+				current->size -= match;
+				current->bp = reducebps(current->bp,match);
+				temp->next.child[current->bp.bp0] = current;
+				current=temp;
+				// str.erase(0,current->size);
+				//divide current node based on match;
+			}
+		}else{ 
+			// next[i] == NULL
+			current->next.child[i] = (Node) malloc(sizeof(node));
+			parent = current;
+			current = current ->next.child[i];
+			int size = str->new_len;
+
+			while(size>0){
+
+				if(size>4){
+					current-> size = 4;
+					current-> bp = setbps(str->ptr, 4);
+					current-> isleaf = 0;
+					erase_str(str, 4);
+
+					for(j=0;j<4;j++) {
+						current->next.child[j]=NULL;
+					}
+
+					size -= 4;
+					i = getval(str->ptr[0]);
+
+					current->next.child[i] = (Node) malloc(sizeof(node));
+					parent = current;
+					current = current->next.child[i];
+					continue;
+				}else{
+					current->size = size;
+					current->bp = setbps(str->ptr, size);
+					current->isleaf = 1;
+					erase_str(str, size);
+					current->next.leaf = (Leafnode) malloc(sizeof(leafnode));
+					size=0;
+					break;
+					//leaf node
+				}
+			}
+			break;
+		}
+	} while(str->new_len > 0);
 	current->next.leaf->count++;
 	return;
 }
