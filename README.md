@@ -10,4 +10,6 @@
  
 * In the synchronization step for binning, While merging the bins, we need to know which bins will stay on which node. For that , we need to know the total no. of bins and the total no of nodes. To know the total no. of bins , we need another global communication. Is there any other way to do this?
 
+* Data sets : https://www.ebi.ac.uk/ena
+
  
