@@ -58,6 +58,14 @@ void zhash_set(struct ZHashTable *hash_table, char *key, void *val)
   hash = zgenerate_hash(hash_table, key);
   entry = hash_table->entries[hash];
 
+  while (entry) {
+    if (strcmp(key, entry->key) == 0) {
+      entry->val = val;
+      return;
+    }
+    entry = entry->next;
+  }
+
   entry = zcreate_entry(key, val);
 
   entry->next = hash_table->entries[hash];
