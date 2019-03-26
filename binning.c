@@ -167,10 +167,18 @@ char* merge_keys(int a_len, int b_len, char* a, char* b, bool forward) {
 }
 
 // iteration for level one hash using mmers
-void* iterate_level_one_hash(struct ZHashTable* hash_table, bool indirection) {
+void* iterate_level_one_hash(struct ZHashTable* hash_table, bool indirection, bool remove_current) {
     static struct ZHashTable* table = NULL;
     static struct ZHashEntry** entry;
     static int index;
+    static bool remove;
+
+    // remove currently pointed node
+    // when the next iterate is called
+    if (hash_table == NULL && remove_current) {
+        remove = remove_current;
+        return NULL;
+    }
 
     // reset variables table does not match hash_table
     if (table != hash_table) {
@@ -182,7 +190,15 @@ void* iterate_level_one_hash(struct ZHashTable* hash_table, bool indirection) {
     // entry points to previously returned value in the same chain
     // move to next entry in the chain
     if (entry != NULL && *entry != NULL) {
-        entry = &(*entry)->next;
+        if (!remove) {
+            entry = &(*entry)->next;
+        } else {
+            // if current node is marked for removal handle differently
+            struct ZHashEntry* temp = *entry;
+            *entry = (*entry)->next;
+            zfree_entry(temp, false);
+            remove = false;
+        }
     }
 
     // entry points to empty chain
@@ -212,10 +228,18 @@ void* iterate_level_one_hash(struct ZHashTable* hash_table, bool indirection) {
 }
 
 // iteration for level two hash using kmers
-void* iterate_level_two_hash(struct ZHashTable* hash_table, bool indirection) {
+void* iterate_level_two_hash(struct ZHashTable* hash_table, bool indirection, bool remove_current) {
     static struct ZHashTable* table = NULL;
     static struct ZHashEntry** entry;
     static int index;
+    static bool remove;
+
+    // remove currently pointed node
+    // when the next iterate is called
+    if (hash_table == NULL && remove_current) {
+        remove = remove_current;
+        return NULL;
+    }
 
     // reset variables table does not match hash_table
     if (table != hash_table) {
@@ -227,7 +251,15 @@ void* iterate_level_two_hash(struct ZHashTable* hash_table, bool indirection) {
     // entry points to previously returned value in the same chain
     // move to next entry in the chain
     if (entry != NULL && *entry != NULL) {
-        entry = &(*entry)->next;
+        if (!remove) {
+            entry = &(*entry)->next;
+        } else {
+            // if current node is marked for removal handle differently
+            struct ZHashEntry* temp = *entry;
+            *entry = (*entry)->next;
+            zfree_entry(temp, false);
+            remove = false;
+        }
     }
 
     // entry points to empty chain
@@ -255,7 +287,6 @@ void* iterate_level_two_hash(struct ZHashTable* hash_table, bool indirection) {
         return *entry;
     }
 }
-
 // extend two kmer entries
 void extend_kmers(struct ZHashTable* hash_table, struct ZHashEntry** a, struct ZHashEntry** b, bool forward) {
     struct ZHashEntry* temp_a, *temp_b;
@@ -313,7 +344,7 @@ void find_kmer_extensions(struct ZHashTable* hash_table, bool forward) {
     while (mmer_score <= getbp('A')*MMER_SIZE){
         // perform operation till mmer reaches AAAA..
         if ((mmer_hash = zhash_get(hash_table, mmer)) != NULL) {
-            while ((kmer_entry = iterate_level_one_hash(mmer_hash, true)) != NULL) {
+            while ((kmer_entry = iterate_level_one_hash(mmer_hash, true, false)) != NULL) {
                 // calculate possible extensions and their signatures
                 a_key = (*kmer_entry)->key;
                 a_len = strlen(a_key);
@@ -329,7 +360,7 @@ void find_kmer_extensions(struct ZHashTable* hash_table, bool forward) {
                     if (getscore(compare_mmer) <= mmer_score \
                     && (compare_mmer_hash = (struct ZHashTable*) zhash_get(hash_table, compare_mmer)) != NULL) {
                         // compare signature is lexicographically greater than or equal
-                        while((compare_entry = iterate_level_two_hash(compare_mmer_hash, true)) != NULL){
+                        while((compare_entry = iterate_level_two_hash(compare_mmer_hash, true, false)) != NULL){
                             // handle equality case
                             if (compare_entry == kmer_entry) continue;
 
@@ -358,7 +389,7 @@ void find_kmer_extensions(struct ZHashTable* hash_table, bool forward) {
                 // if only one extension has been found
                 // merge entries and store new entry
                 if (!multiple_extension && extend_entry != NULL) {
-                    extend_kmers(hash_table, kmer_entry, extend_entry, true);
+                    extend_kmers(mmer_hash, kmer_entry, extend_entry, true);
                 }
             }
         }
@@ -374,11 +405,11 @@ void print_kmers(struct ZHashTable* hash_table) {
     struct ZHashEntry* mmer_entry, *kmer_entry;
     ll_node* read_id, *traverse;
     
-    while ((mmer_entry = (struct ZHashEntry*) iterate_level_one_hash(hash_table, false)) != NULL) {
+    while ((mmer_entry = (struct ZHashEntry*) iterate_level_one_hash(hash_table, false, false)) != NULL) {
         printf("%s\n", (mmer_entry)->key); // print mmer
         kmer_hash = (mmer_entry)->val;
         // iterate over all kmers of mmer
-        while ((kmer_entry = (struct ZHashEntry*) iterate_level_two_hash(kmer_hash, false)) != NULL) {
+        while ((kmer_entry = (struct ZHashEntry*) iterate_level_two_hash(kmer_hash, false, false)) != NULL) {
             printf("%s\n", kmer_entry->key);
             read_id = (ll_node*) kmer_entry->val;
             // iterate over read id lists of each base pair
@@ -563,22 +594,29 @@ struct ZHashTable* process_read(struct ZHashTable* hash_table, char* read, int r
 // prune kmers which have base pair occuring in only one read
 // such kmers are highly likely to have been generated by errors
 struct ZHashTable* prune_kmers(struct ZHashTable* hash_table) {
-    struct ZHashEntry** traverse;
+    struct ZHashEntry** traverse, **to_remove = NULL;
     struct ZHashEntry* temp;
-    ll_node* read_id_list;
-    while ((traverse = iterate_level_two_hash(hash_table, true)) != NULL) {
+    ll_node* read_id_list, *temp_node;
+    while ((traverse = iterate_level_two_hash(hash_table, true, false)) != NULL) {
+
         read_id_list = (ll_node*) (*traverse)->val;
         // check first entry of read id list to see if it has a next node
         if ((((ll_node*)read_id_list->item)->next == NULL)) {
             // kmer has only one read id entry
-            // remove entry
-            temp = *traverse;
-            *traverse = (*traverse)->next;
-            zfree_entry(temp, false);
-            hash_table->entry_count--;
+            // free list and remove entry
+            while (read_id_list != NULL) {
+                temp_node = read_id_list;
+                free(temp_node->item);
+                read_id_list = read_id_list->next;
+                free(temp_node);
+            }
+            (*traverse)->val = NULL;
+            // mark current node for removal
+            iterate_level_two_hash(NULL, false, true);
         }
     }
 
+    // if entire hash table is emptied free and return NULL
     if (hash_table->entry_count == 0) {
         free(hash_table);
         return NULL;
@@ -591,14 +629,13 @@ struct ZHashTable* prune_kmers(struct ZHashTable* hash_table) {
 // applies prune_kmers function on all non null entries
 struct ZHashTable* prune_data(struct ZHashTable* hash_table) {
     struct ZHashEntry** traverse, *temp;
-    while ((traverse = iterate_level_one_hash(hash_table, true)) != NULL) {
+    while ((traverse = iterate_level_one_hash(hash_table, true, false)) != NULL) {
         // entries exist for this hash value
         if (prune_kmers((*traverse)->val) == NULL) {
             // hash table has been emptied remove entry
-            temp = *traverse;
-            *traverse = (*traverse)->next;
-            zfree_entry(temp, false);
-            hash_table->entry_count--;
+            // mark entry for removal
+            (*traverse)->val = NULL;
+            iterate_level_one_hash(NULL, false, true);
         }
     }
 }

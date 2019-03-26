@@ -44,7 +44,9 @@ ll_node* merge_sorted_list(ll_node* a, ll_node* b) {
     // if any list is not exhausted append to existing
     if (a != NULL) {
         *traverse = a;
-    } else {
+    }
+
+    if (b != NULL) {
         *traverse = b;
     }
 
