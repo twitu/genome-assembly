@@ -20,6 +20,12 @@ def generate_reads(genome_len = 500, read_len = 30, read_num = 20, seed = 20):
 
     return genome, reads
 
+def write_reads(genome, reads, read_len=30, filename="reads.txt"):
+    with open(filename, "w") as f:
+        for read in reads:
+            f.write(genome[read:read + read_len] + "\n")
+
+
 def plot_reads(reads, genome_len = 500, read_len = 30):
 
     # create binary matrix to represent read
@@ -39,9 +45,11 @@ def plot_reads(reads, genome_len = 500, read_len = 30):
     # plot it
     plt.figure(figsize=(20, 10))
     plt.imshow(matrix, interpolation='nearest', cmap=cmap, norm=norm)
-    plt.show()
+    plt.savefig("reads.png")
+    plt.close()
 
 if __name__ == "__main__":
     genome, reads = generate_reads()
+    write_reads(genome, reads)
     plot_reads(reads)
 

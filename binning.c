@@ -59,15 +59,26 @@ int getval(char c){
 	}
 }
 
+// helper function to get score of string
+int getscore(char* string) {
+    int score = 0;
+    while (*string != '\0') {
+        score = score*4 + getval(*string);
+        string++;
+    }
+    
+    return score;
+}
+
 // helper function for generating canonical mmers
 // returns next lexicographically smaller mmer than the one passed
 // wraps around from AAAA to TTTT
 char* next_smaller_mmer(char* mmer) {
-    for (int i = MMER_SIZE - 1; i >= 0; i++) {
+    for (int i = MMER_SIZE - 1; i >= 0; i--) {
         if (mmer[i] == 'A') {
-            mmer[i] == 'T';
+            mmer[i] = 'T';
         } else {
-            mmer[i] = getbp(getval(mmer[i]) - 1);
+            mmer[i] = getbp(getval(mmer[i]) + 1);
             break;
         }
     }
@@ -117,6 +128,44 @@ ll_node* merge_lists(int len, ll_node* a, ll_node* b, bool forward) {
     return new_list;
 }
 
+bool compare_overlap(char* a, char* b, bool forward) {
+    char* temp;
+    int len;
+
+    // swap to always keep a on left side of overlap
+    // len contains length of string that will be left side of overlap
+    if (!forward) {
+        temp = a;
+        a = b;
+        b = temp;
+    }
+
+    len = strlen(a);
+
+    for (int i = 0; i < KMER_SIZE - 1; i++) {
+        if (a[len - (KMER_SIZE - 1) + i] != b[i]) return false;
+    }
+
+    return true;
+}
+
+// merge key strings in both backward or forward direction depending on parameter
+char* merge_keys(int a_len, int b_len, char* a, char* b, bool forward) {
+    int len = a_len + b_len + 1 - (KMER_SIZE - 1);
+    char* new_key = malloc(len);
+
+    if (forward) {
+        strncpy(new_key, a, a_len);
+        strncpy(&new_key[a_len], &b[KMER_SIZE - 1], b_len - (KMER_SIZE - 1));
+    } else {
+        strncpy(new_key, b, b_len);
+        strncpy(&new_key[b_len], &a[KMER_SIZE - 1], a_len - (KMER_SIZE - 1));
+    }
+    
+    new_key[len] = '\0';
+    return new_key;
+}
+
 // iteration for level one hash using mmers
 void* iterate_level_one_hash(struct ZHashTable* hash_table, bool indirection) {
     static struct ZHashTable* table = NULL;
@@ -150,7 +199,8 @@ void* iterate_level_one_hash(struct ZHashTable* hash_table, bool indirection) {
     }
     
     // if iteration has ended keep returning NULL for subsequent calls
-    if (entry == NULL) {
+    if (entry == NULL || *entry == NULL) {
+        table = NULL;
         return NULL;
     }
 
@@ -194,7 +244,8 @@ void* iterate_level_two_hash(struct ZHashTable* hash_table, bool indirection) {
     }
     
     // if iteration has ended keep returning NULL for subsequent calls
-    if (entry == NULL) {
+    if (entry == NULL || *entry == NULL) {
+        table = NULL;
         return NULL;
     }
 
@@ -205,25 +256,9 @@ void* iterate_level_two_hash(struct ZHashTable* hash_table, bool indirection) {
     }
 }
 
-char* merge_keys(int a_len, int b_len, char* a, char* b, bool forward) {
-    int len = a_len + b_len + 1 - (KMER_SIZE - 1);
-    char* new_key = malloc(len);
-
-    if (forward) {
-        strncpy(new_key, a, a_len);
-        strncpy(&new_key[a_len], &b[KMER_SIZE - 1], b_len - (KMER_SIZE - 1));
-    } else {
-        strncpy(new_key, b, b_len);
-        strncpy(&new_key[b_len], &a[KMER_SIZE - 1], a_len - (KMER_SIZE - 1));
-    }
-    
-    new_key[len] = '\0';
-    return new_key;
-}
-
 // extend two kmer entries
 void extend_kmers(struct ZHashTable* hash_table, struct ZHashEntry** a, struct ZHashEntry** b, bool forward) {
-    struct ZHashEntry* temp;
+    struct ZHashEntry* temp_a, *temp_b;
     ll_node* new_read_ids;
     char* new_key = NULL;
     int a_len = strlen((*a)->key);
@@ -233,17 +268,105 @@ void extend_kmers(struct ZHashTable* hash_table, struct ZHashEntry** a, struct Z
     new_read_ids = merge_lists(a_len, (ll_node*) (*a)->val, (ll_node*) (*b)->val, forward);
     new_key = merge_keys(a_len, b_len, (char*) (*a)->key, (char*) (*b)->key, forward);
 
-    // free previous entries by non recursive method
-    temp = (*a);
-    a = &(*a)->next;
-    zfree_entry(temp, false);
-    temp = (*b);
-    b = &(*b)->next;
-    zfree_entry(temp, false);
+    // free current entries by non recursive method
+    // have their next pointer point to the next entries
+    if ((*a)->next == (*b)) {
+        // adjacent pointers can create memory leak
+        // handle by swapping their order
+        temp_a = (void*) a;
+        a = b;
+        b = (struct ZHashEntry**) temp_a;
+    }
+
+    // change and free separately
+    temp_a = (*a);
+    *a = (*a)->next;
+    temp_b = (*b);
+    *b = (*b)->next;
+    zfree_entry(temp_a, false);
+    zfree_entry(temp_b, false);
+    hash_table->entry_count = hash_table->entry_count - 2;
 
     // store new entry
     zhash_set(hash_table, new_key, new_read_ids);
     free(new_key);
+}
+
+void find_kmer_extensions(struct ZHashTable* hash_table, bool forward) {
+    // initialize signature kmer
+    char* mmer = malloc(sizeof(char)*(MMER_SIZE + 1));
+    char* compare_mmer = malloc(sizeof(char)*(MMER_SIZE + 1));
+    mmer[0] = 'C';
+    mmer[MMER_SIZE] = '\0';
+    compare_mmer[MMER_SIZE] = '\0';
+    for (int i = 1; i < MMER_SIZE; i++) {
+        mmer[i] = 'T';
+    }
+    int mmer_score = getscore(mmer);
+    bool multiple_extension;
+    char* a_key;
+    int a_len;
+
+    // iterate over all mmers from CTTT to AAAA..
+    struct ZHashTable* mmer_hash, *compare_mmer_hash;
+    struct ZHashEntry** kmer_entry, **compare_entry, **extend_entry = NULL;
+    while (mmer_score <= getbp('A')*MMER_SIZE){
+        // perform operation till mmer reaches AAAA..
+        if ((mmer_hash = zhash_get(hash_table, mmer)) != NULL) {
+            while ((kmer_entry = iterate_level_one_hash(mmer_hash, true)) != NULL) {
+                // calculate possible extensions and their signatures
+                a_key = (*kmer_entry)->key;
+                a_len = strlen(a_key);
+                multiple_extension = false;
+                extend_entry = NULL;
+                // copy last MMER_SIZE - 1 digits
+                strncpy(compare_mmer, &a_key[a_len - (MMER_SIZE - 1)], MMER_SIZE - 1);
+                compare_mmer[MMER_SIZE] = '\0';
+                for (int i = 0; i < 4; i++) {
+                    // try all combinations for last digit
+                    // proceed if signature is lexicographically larger and has entries in the table
+                    compare_mmer[MMER_SIZE-1] = getbp(i);
+                    if (getscore(compare_mmer) <= mmer_score \
+                    && (compare_mmer_hash = (struct ZHashTable*) zhash_get(hash_table, compare_mmer)) != NULL) {
+                        // compare signature is lexicographically greater than or equal
+                        while((compare_entry = iterate_level_two_hash(compare_mmer_hash, true)) != NULL){
+                            // handle equality case
+                            if (compare_entry == kmer_entry) continue;
+
+                            // check if KMER_SIZE - 1 characters overlap
+                            if (!compare_overlap(a_key, (*compare_entry)->key, forward)) continue;
+
+                            // if extension entry already exists
+                            // there are multiple possible extensions
+                            // unitig extension is not possible
+                            if (extend_entry != NULL) {
+                                extend_entry = NULL;
+                                multiple_extension = true;
+                                break;
+                            } else {
+                                extend_entry = compare_entry;
+                            }
+                        }
+                    }
+
+                    if (multiple_extension) {
+                        break;
+                    }
+                }
+
+                // after iterating through possible signature extensions
+                // if only one extension has been found
+                // merge entries and store new entry
+                if (!multiple_extension && extend_entry != NULL) {
+                    extend_kmers(hash_table, kmer_entry, extend_entry, true);
+                }
+            }
+        }
+
+        // get lexicographically next smallest mmer
+        mmer = next_smaller_mmer(mmer);
+        mmer_score++;
+    }
 }
 
 void print_kmers(struct ZHashTable* hash_table) {
@@ -271,6 +394,7 @@ void print_kmers(struct ZHashTable* hash_table) {
             }
             printf("\n");
         }
+        printf("\n");
     }
 }
 
@@ -288,7 +412,7 @@ struct ZHashTable* process_read(struct ZHashTable* hash_table, char* read, int r
     char kmer_key[KMER_SIZE + 1];
     char mmer[MMER_SIZE + 1];
     char signature_cpy[MMER_SIZE + 1];
-    int score = 0, rev_score = 0, max_score = 0;
+    int score, rev_score, max_score;
     bool is_rev;
     int msb;
 
@@ -297,6 +421,11 @@ struct ZHashTable* process_read(struct ZHashTable* hash_table, char* read, int r
 
         // iterate over the read and calculate the signature from scratch
         if (kmer > signature) {
+
+            // re intialize values each time for fresh calculation
+            score = 0;
+            rev_score = 0;
+            max_score = 0;
 
             // store first MMER_SIZE characters in array
             for (j = 0; j < MMER_SIZE; j++) {
@@ -319,7 +448,7 @@ struct ZHashTable* process_read(struct ZHashTable* hash_table, char* read, int r
 
             // iterate over other characters
             j = MMER_SIZE;
-            while (kmer[j] != '\0') {
+            while (j < KMER_SIZE) {
                 // incrementally update scores
                 score = (score - getval(mmer[msb])*power_val[MMER_SIZE-1])*4;
                 score += getval(kmer[j]);
@@ -381,12 +510,12 @@ struct ZHashTable* process_read(struct ZHashTable* hash_table, char* read, int r
 
         // get reverse complement of signature if rev complement has higher score
         if (is_rev) {
-            for (i = 0; i < MMER_SIZE; i++) {
-                signature_cpy[i] = getbp(3 - getval(signature_cpy[i]));
+            for (j = 0; j < MMER_SIZE; j++) {
+                signature_cpy[j] = getbp(3 - getval(signature_cpy[j]));
             }
 
-            for (i = 0; i < KMER_SIZE; i++) {
-                kmer_key[i] = getbp(3 - getval(kmer_key[i]));
+            for (j = 0; j < KMER_SIZE; j++) {
+                kmer_key[j] = getbp(3 - getval(kmer_key[j]));
             }
         }
 
@@ -437,53 +566,55 @@ struct ZHashTable* prune_kmers(struct ZHashTable* hash_table) {
     struct ZHashEntry** traverse;
     struct ZHashEntry* temp;
     ll_node* read_id_list;
-    for (int i = 0; i < hash_sizes[hash_table->size_index]; i++) {
-        if (hash_table->entries[i] != NULL) {
-            // entries exist for this hash value
-            traverse = &hash_table->entries[i];
-            while (*traverse != NULL) {
-                read_id_list = (*traverse)->val;
-                // check first entry of read id list to see if it has a next node
-                if (((ll_node*) read_id_list->item)->next == NULL) {
-                    // kmer has only one read id entry
-                    temp = *traverse;
-                    *traverse = ((struct ZHashEntry*) *traverse)->next;
-                    zfree_entry(temp, false);
-                } else {
-                    traverse = &((struct ZHashEntry*) *traverse)->next;
-                }
-            }
+    while ((traverse = iterate_level_two_hash(hash_table, true)) != NULL) {
+        read_id_list = (ll_node*) (*traverse)->val;
+        // check first entry of read id list to see if it has a next node
+        if ((((ll_node*)read_id_list->item)->next == NULL)) {
+            // kmer has only one read id entry
+            // remove entry
+            temp = *traverse;
+            *traverse = (*traverse)->next;
+            zfree_entry(temp, false);
+            hash_table->entry_count--;
         }
+    }
+
+    if (hash_table->entry_count == 0) {
+        free(hash_table);
+        return NULL;
+    } else {
+        return hash_table;
     }
 }
 
 // iterates over all entries of first level hash table
 // applies prune_kmers function on all non null entries
 struct ZHashTable* prune_data(struct ZHashTable* hash_table) {
-    struct ZHashEntry* traverse;
-    for (int i = 0; i < hash_sizes[hash_table->size_index]; i++) {
-        if ((traverse = hash_table->entries[i]) != NULL) {
-            // entries exist for this hash value
-            while (traverse != NULL) {
-                prune_kmers((struct ZHashTable*) traverse->val);
-                traverse = traverse->next;
-            }
+    struct ZHashEntry** traverse, *temp;
+    while ((traverse = iterate_level_one_hash(hash_table, true)) != NULL) {
+        // entries exist for this hash value
+        if (prune_kmers((*traverse)->val) == NULL) {
+            // hash table has been emptied remove entry
+            temp = *traverse;
+            *traverse = (*traverse)->next;
+            zfree_entry(temp, false);
+            hash_table->entry_count--;
         }
     }
 }
 
 int main() {
     // initialize file and structures
-    FILE* file = fopen("input.txt", "r");
+    FILE* file = fopen("reads.txt", "r");
     struct ZHashTable* hash_table = zcreate_hash_table();
     
     // initialize variables
-    char read[20];
+    char read[50];
     int read_id = 0;
     
     // get all the reads from file
     // expecting read of length less than 20
-    while (fgets(read, 20, file) != NULL) {
+    while (fgets(read, 50, file) != NULL) {
 
         // pre process and store read
         int len = strlen(read);
@@ -492,13 +623,15 @@ int main() {
         process_read(hash_table, read, read_id++);
     }
 
+    // prune stored values and remove possibly erroneous kmers
+    prune_data(hash_table);
+
+    // apply unitig extension to the data
+    // first left to right directions
+    // then in right to left direction
+    find_kmer_extensions(hash_table, true);
+    find_kmer_extensions(hash_table, false);
+
     // print kmers
     print_kmers(hash_table);
-
-    // TODO: prune data and remove possibly erroneous kmers
-
-    // TODO:
-    // apply unitig extension to the data
-    // extension can only occur 
-
 }

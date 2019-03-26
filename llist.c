@@ -19,8 +19,7 @@ ll_node* create_node_item(void* item) {
 ll_node* merge_sorted_list(ll_node* a, ll_node* b) {
 
     ll_node* sorted = NULL;
-    ll_node** traverse;
-    *traverse = sorted;
+    ll_node** traverse = &sorted;
 
     while (a != NULL && b != NULL) {
         if (a->read_id > b->read_id) {
