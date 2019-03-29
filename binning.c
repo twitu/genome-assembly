@@ -117,7 +117,7 @@ ll_node* merge_lists(int len, ll_node* a, ll_node* b, bool forward) {
         b = b->next;
         free(temp);
 
-        if (i == KMER_SIZE - 1) {
+        if (i == KMER_SIZE - 2) {
             // if last node link rest of b nodes to new list
             a->next = b;
         } else {
@@ -406,8 +406,8 @@ void print_kmers(struct ZHashTable* hash_table) {
     ll_node* read_id, *traverse;
     
     while ((mmer_entry = (struct ZHashEntry*) iterate_level_one_hash(hash_table, false, false)) != NULL) {
-        printf("%s\n", (mmer_entry)->key); // print mmer
         kmer_hash = (mmer_entry)->val;
+        printf("%s\n", mmer_entry->key); // print mmer
         // iterate over all kmers of mmer
         while ((kmer_entry = (struct ZHashEntry*) iterate_level_two_hash(kmer_hash, false, false)) != NULL) {
             printf("%s\n", kmer_entry->key);
@@ -423,7 +423,6 @@ void print_kmers(struct ZHashTable* hash_table) {
                 printf("\n");
                 read_id = read_id->next;
             }
-            printf("\n");
         }
         printf("\n");
     }
