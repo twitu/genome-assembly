@@ -152,7 +152,8 @@ bool compare_overlap(char* a, char* b, bool forward) {
 // merge key strings in both backward or forward direction depending on parameter
 char* merge_keys(int a_len, int b_len, char* a, char* b, bool forward) {
     int len = a_len + b_len + 1 - (KMER_SIZE - 1);
-    char* new_key = malloc(len);
+    // critical to use calloc, malloc can give unitialized string which can cause error
+    char* new_key = calloc(len, sizeof(char));
 
     if (forward) {
         strncpy(new_key, a, a_len);
@@ -162,7 +163,6 @@ char* merge_keys(int a_len, int b_len, char* a, char* b, bool forward) {
         strncpy(&new_key[b_len], &a[KMER_SIZE - 1], a_len - (KMER_SIZE - 1));
     }
     
-    new_key[len] = '\0';
     return new_key;
 }
 
