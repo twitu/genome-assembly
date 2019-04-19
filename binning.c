@@ -428,6 +428,32 @@ void print_kmers(struct ZHashTable* hash_table) {
     }
 }
 
+void expand_read_id_list(struct ZHashTable* hashtable) {
+    struct ZHashEntry* mmer_entry = NULL, *kmer_entry = NULL;
+    struct ZHashTable* kmer_hash = NULL;
+    ll_node* read_id_list, *traverse = NULL;
+    ll_node* read_id_lists;
+    int kmer_len, i;
+    while ((mmer_entry = iterate_level_one_hash(hashtable, false, false)) != NULL) {
+        kmer_hash = mmer_entry->val;
+        while ((kmer_entry = iterate_level_two_hash(kmer_hash, false, false)) != NULL) {
+            traverse = NULL;
+            read_id_list = kmer_entry->val;
+            kmer_len = strlen(kmer_entry->key);
+            for (i = 0; i < kmer_len; i++) {
+                if (traverse == NULL) {
+                    traverse = create_node_item(read_id_list);
+                    read_id_lists = traverse;
+                } else {
+                    traverse->next = create_node_item(duplicate_llist(read_id_list));
+                    traverse = traverse->next;
+                }
+            }
+            kmer_entry->val = read_id_lists;
+        }
+    }
+}
+
 // stores all kmers of a read
 // kmers are stored in 2 level hashing
 // first level is hashed by signature of kmer
@@ -559,28 +585,19 @@ struct ZHashTable* process_read(struct ZHashTable* hash_table, char* read, int r
         
         // check if this kmer has been stored previously
         ll_node* read_id_list, *traverse;
-        char temp;
         if ((read_id_list = zhash_get(kmer_storage, kmer_key)) == NULL) {
-            
-            // create linked list for all base pairs and store read id
-            // creating list in reverse order so it matches order of bp in kmers
-            for (j = 0; j < KMER_SIZE; j++) {
-                traverse = (ll_node*) create_node_item((void*) create_node_num(read_id));
-                traverse->next = read_id_list;
-                read_id_list = traverse;
-            }
-
-            // store newly created linked list with kmer as key
-            zhash_set(kmer_storage, kmer_key, read_id_list);
+            // create entry for the first time
+            traverse = (ll_node*) create_node_num(read_id);
+            zhash_set(kmer_storage, kmer_key, traverse);
         } else {
-            // kmer entry exists
-            // add read id to read id list
-            while (read_id_list != NULL) {
-                traverse = (ll_node*) create_node_num(read_id);
-                traverse->next = read_id_list->item;
-                read_id_list->item = traverse;
-                read_id_list = read_id_list->next;
-            }
+            // to make operation efficient and maintain descending order sorted linked list
+            // shift read id of first node to second node and and put new read id in first node
+            // all other nodes are untouched and there is no need to store the linked list again
+            // as the pointer to first node has not changed
+            traverse = (ll_node*) create_node_num(read_id_list->read_id);
+            read_id_list->read_id = read_id;
+            traverse->next = read_id_list->next;
+            read_id_list->next = traverse;
         }
 
         // increment kmer pointer
@@ -600,15 +617,10 @@ struct ZHashTable* prune_kmers(struct ZHashTable* hash_table) {
 
         read_id_list = (ll_node*) (*traverse)->val;
         // check first entry of read id list to see if it has a next node
-        if ((((ll_node*)read_id_list->item)->next == NULL)) {
+        if (read_id_list->next == NULL) {
             // kmer has only one read id entry
-            // free list and remove entry
-            while (read_id_list != NULL) {
-                temp_node = read_id_list;
-                free(temp_node->item);
-                read_id_list = read_id_list->next;
-                free(temp_node);
-            }
+            // free node and remove entry
+            free(read_id_list);
             (*traverse)->val = NULL;
             // mark current node for removal
             iterate_level_two_hash(NULL, false, true);
@@ -661,6 +673,8 @@ int main() {
 
     // prune stored values and remove possibly erroneous kmers
     prune_data(hash_table);
+    // expand remaining entries
+    expand_read_id_list(hash_table);
 
     // apply unitig extension to the data
     // first left to right directions
