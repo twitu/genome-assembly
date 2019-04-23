@@ -18,6 +18,11 @@ static const size_t hash_sizes[] = {
   25000009, 50000047, 104395301, 217645177, 512927357, 1000000007
 };
 
+typedef struct extension_node {
+    char* key;
+    ll_node* read_id_lists;
+} extension_node;
+
 // in line helper functions
 #define MIN(A,B) \
    ({ __typeof__ (A) _A = (A); \
@@ -167,6 +172,7 @@ char* merge_keys(int a_len, int b_len, char* a, char* b, bool forward) {
 }
 
 // iteration for level one hash using mmers
+// give hash_table as NULL and remove_current as true to remove currently pointed node
 void* iterate_level_one_hash(struct ZHashTable* hash_table, bool indirection, bool remove_current) {
     static struct ZHashTable* table = NULL;
     static struct ZHashEntry** entry;
@@ -176,6 +182,9 @@ void* iterate_level_one_hash(struct ZHashTable* hash_table, bool indirection, bo
     // remove currently pointed node
     // when the next iterate is called
     if (hash_table == NULL && remove_current) {
+        struct ZHashEntry* temp = *entry;
+        (*entry) = (*entry)->next;
+        table->entries--;
         remove = remove_current;
         return NULL;
     }
@@ -190,14 +199,9 @@ void* iterate_level_one_hash(struct ZHashTable* hash_table, bool indirection, bo
     // entry points to previously returned value in the same chain
     // move to next entry in the chain
     if (entry != NULL && *entry != NULL) {
+        // if node has been removed do not move forward
         if (!remove) {
             entry = &(*entry)->next;
-        } else {
-            // if current node is marked for removal handle differently
-            struct ZHashEntry* temp = *entry;
-            *entry = (*entry)->next;
-            zfree_entry(temp, false);
-            remove = false;
         }
     }
 
@@ -228,6 +232,7 @@ void* iterate_level_one_hash(struct ZHashTable* hash_table, bool indirection, bo
 }
 
 // iteration for level two hash using kmers
+// give hash_table as NULL and remove_current as true to remove currently pointed node
 void* iterate_level_two_hash(struct ZHashTable* hash_table, bool indirection, bool remove_current) {
     static struct ZHashTable* table = NULL;
     static struct ZHashEntry** entry;
@@ -237,7 +242,10 @@ void* iterate_level_two_hash(struct ZHashTable* hash_table, bool indirection, bo
     // remove currently pointed node
     // when the next iterate is called
     if (hash_table == NULL && remove_current) {
-        remove = remove_current;
+        struct ZHashEntry* temp = *entry;
+        (*entry) = (*entry)->next;
+        table->entries--;
+        remove = true;
         return NULL;
     }
 
@@ -254,10 +262,7 @@ void* iterate_level_two_hash(struct ZHashTable* hash_table, bool indirection, bo
         if (!remove) {
             entry = &(*entry)->next;
         } else {
-            // if current node is marked for removal handle differently
-            struct ZHashEntry* temp = *entry;
-            *entry = (*entry)->next;
-            zfree_entry(temp, false);
+            // if node has been removed do not move forward and reset remove flag
             remove = false;
         }
     }
@@ -287,40 +292,101 @@ void* iterate_level_two_hash(struct ZHashTable* hash_table, bool indirection, bo
         return *entry;
     }
 }
+
 // extend two kmer entries
-void extend_kmers(struct ZHashTable* hash_table, struct ZHashEntry** a, struct ZHashEntry** b, bool forward) {
-    struct ZHashEntry* temp_a, *temp_b;
-    ll_node* new_read_ids;
-    char* new_key = NULL;
-    int a_len = strlen((*a)->key);
-    int b_len = strlen((*b)->key);
+extension_node* extend_kmers(struct ZHashEntry* a, struct ZHashEntry* b, bool forward) {
+    int a_len = strlen(a->key);
+    int b_len = strlen(b->key);
 
     // merge read ids of both entries and concatenate keys
-    new_read_ids = merge_lists(a_len, (ll_node*) (*a)->val, (ll_node*) (*b)->val, forward);
-    new_key = merge_keys(a_len, b_len, (char*) (*a)->key, (char*) (*b)->key, forward);
+    ll_node* new_read_ids = merge_lists(a_len, (ll_node*) a->val, (ll_node*) b->val, forward);
+    char* new_key = merge_keys(a_len, b_len, (char*) a->key, (char*) b->key, forward);
+    extension_node* to_return = malloc(sizeof(extension_node));
+    to_return->key = new_key;
+    to_return->read_id_lists = new_read_ids;
+    return to_return;
+}
 
-    // free current entries by non recursive method
-    // have their next pointer point to the next entries
-    if ((*a)->next == (*b)) {
-        // adjacent pointers can create memory leak
-        // handle by swapping their order
-        temp_a = (void*) a;
-        a = b;
-        b = (struct ZHashEntry**) temp_a;
+extension_node* further_extend_kmers(extension_node* a, struct ZHashEntry* b, bool forward) {
+    int a_len = strlen(a->key);
+    int b_len = strlen(b->key);
+
+    // merge read ids of both entries and concatenate keys
+    ll_node* new_read_ids = merge_lists(a_len, (ll_node*) a->read_id_lists, (ll_node*) b->val, forward);
+    char* new_key = merge_keys(a_len, b_len, (char*) a->key, (char*) b->key, forward);
+
+    free(a->key);
+    a->key = new_key;
+    a->read_id_lists = new_read_ids;
+    return a;
+}
+
+// find kmer extension from existing table else return NULL
+struct ZHashEntry* find_kmer_extension(struct ZHashTable* hash_table, void* entry, bool extended, int mmer_score, bool forward) {
+    // initialize key structure
+    char* key = NULL;
+    if (extended) {
+        key = entry;
+    } else {
+        key = ((struct ZHashEntry*) entry)->key;
+    }
+    int key_len = strlen(key);
+
+    // initialize signature mmer
+    char* compare_mmer = malloc(sizeof(char)*(MMER_SIZE + 1));
+    strncpy(compare_mmer, &key[key_len - (MMER_SIZE - 1)], MMER_SIZE - 1);
+
+    bool multiple_extension = false;
+    struct ZHashEntry** extend_entry = NULL, **compare_entry = NULL;
+    struct ZHashTable* compare_mmer_hash = NULL, *extend_table;
+
+    for (int i = 0; i < 4; i++) {
+        compare_mmer[MMER_SIZE-1] = getbp(i);
+
+        if (getscore(compare_mmer) > mmer_score) {
+            // extension only with lexicographically larger mmers
+            continue;
+        }
+
+        if ((compare_mmer_hash = (struct ZHashTable*) zhash_get(hash_table, compare_mmer)) == NULL) {
+            // ignore if mmer does not have entry
+            continue;
+        }
+
+        // compare signature is lexicographically greater than or equal
+        while((compare_entry = iterate_level_two_hash(compare_mmer_hash, true, false)) != NULL){
+            // handle equality case
+            if (!extended && compare_entry == entry) continue;
+
+            // check if KMER_SIZE - 1 characters overlap
+            if (!compare_overlap(key, (*compare_entry)->key, forward)) continue;
+
+            // if extension entry already exists
+            // there are multiple possible extensions
+            // unitig extension is not possible
+            if (extend_entry != NULL) {
+                extend_entry = NULL;
+                extend_table = NULL;
+                multiple_extension = true;
+                break;
+            } else {
+                extend_table = compare_mmer_hash;
+                extend_entry = compare_entry;
+            }
+        }
+
+        if (multiple_extension) {
+            break;
+        }
     }
 
-    // change and free separately
-    temp_a = (*a);
-    *a = (*a)->next;
-    temp_b = (*b);
-    *b = (*b)->next;
-    zfree_entry(temp_a, false);
-    zfree_entry(temp_b, false);
-    hash_table->entry_count = hash_table->entry_count - 2;
-
-    // store new entry
-    zhash_set(hash_table, new_key, new_read_ids);
-    free(new_key);
+    // deduct count from entry table
+    if (extend_entry != NULL) {
+        extend_table->entry_count--;
+        return to_return;
+    } else {
+        return NULL;
+    }
 }
 
 void find_kmer_extensions(struct ZHashTable* hash_table, bool forward) {
@@ -339,57 +405,33 @@ void find_kmer_extensions(struct ZHashTable* hash_table, bool forward) {
     int a_len;
 
     // iterate over all mmers from CTTT to AAAA..
-    struct ZHashTable* mmer_hash, *compare_mmer_hash;
-    struct ZHashEntry** kmer_entry, **compare_entry, **extend_entry = NULL;
+    struct ZHashTable* mmer_hash, *compare_mmer_hash, *extend_table;
+    struct ZHashEntry* kmer_entry, **compare_entry, **extend_entry = NULL;
+    ll_node_queue* queue = create_queue();
+    bool not_extended = false;
     while (mmer_score <= getbp('A')*MMER_SIZE){
         // perform operation till mmer reaches AAAA..
         if ((mmer_hash = zhash_get(hash_table, mmer)) != NULL) {
-            while ((kmer_entry = iterate_level_one_hash(mmer_hash, true, false)) != NULL) {
-                // calculate possible extensions and their signatures
-                a_key = (*kmer_entry)->key;
-                a_len = strlen(a_key);
-                multiple_extension = false;
-                extend_entry = NULL;
-                // copy last MMER_SIZE - 1 digits
-                strncpy(compare_mmer, &a_key[a_len - (MMER_SIZE - 1)], MMER_SIZE - 1);
-                compare_mmer[MMER_SIZE] = '\0';
-                for (int i = 0; i < 4; i++) {
-                    // try all combinations for last digit
-                    // proceed if signature is lexicographically larger and has entries in the table
-                    compare_mmer[MMER_SIZE-1] = getbp(i);
-                    if (getscore(compare_mmer) <= mmer_score \
-                    && (compare_mmer_hash = (struct ZHashTable*) zhash_get(hash_table, compare_mmer)) != NULL) {
-                        // compare signature is lexicographically greater than or equal
-                        while((compare_entry = iterate_level_two_hash(compare_mmer_hash, true, false)) != NULL){
-                            // handle equality case
-                            if (compare_entry == kmer_entry) continue;
+            // iterate over all kmers of a particular mmer
+            while ((kmer_entry = iterate_level_one_hash(mmer_hash, false, false)) != NULL) {
+                // remove entry from hash table but it has not been freed
+                iterate_level_one_hash(NULL, false, true);
 
-                            // check if KMER_SIZE - 1 characters overlap
-                            if (!compare_overlap(a_key, (*compare_entry)->key, forward)) continue;
+                struct ZHashEntry* extend_entry = find_kmer_extension(hash_table, kmer_entry, not_extended, mmer_score, forward);
 
-                            // if extension entry already exists
-                            // there are multiple possible extensions
-                            // unitig extension is not possible
-                            if (extend_entry != NULL) {
-                                extend_entry = NULL;
-                                multiple_extension = true;
-                                break;
-                            } else {
-                                extend_entry = compare_entry;
-                            }
-                        }
+                // extend once and keeping extending till not possible
+                extension_node* extended;
+                if (extend_entry != NULL) {
+                    extended = extend_kmers(kmer_entry, extend_entry, forward);
+                    while ((extend_entry = find_kmer_extension(hash_table, extended->key, !not_extended, mmer_score, forward)) != NULL) {
+                        extended = further_extend_kmers(extended, extend_entry, forward);
                     }
-
-                    if (multiple_extension) {
-                        break;
-                    }
-                }
-
-                // after iterating through possible signature extensions
-                // if only one extension has been found
-                // merge entries and store new entry
-                if (!multiple_extension && extend_entry != NULL) {
-                    extend_kmers(mmer_hash, kmer_entry, extend_entry, true);
+                    // delet kmer_entry
+                    iterate_level_one_hash(NULL, false, true);
+                    // create new entry for 
+                    zhash_set(mmer_hash, extended->key, extended->read_id_lists);
+                    free(extended->key);
+                    free(extended);
                 }
             }
         }
