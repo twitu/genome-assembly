@@ -7,7 +7,9 @@
 #include "llist.h"
 
 #define MMER_SIZE 4 // efficient to keep mmer_size as powers of 2
-#define KMER_SIZE 10
+#define KMER_SIZE 31
+#define ABUNDANCE_CUTOFF 1
+#define READ_LENGTH 101
 
 // defined constants for faster multiplication
 const int power_val[] = {1, 4, 16, 64, 256, 1024, 4096, 16384};
@@ -766,11 +768,17 @@ struct ZHashTable* prune_kmers(struct ZHashTable* hash_table) {
     while ((traverse = iterate_level_two_hash(hash_table, true, false)) != NULL) {
 
         read_id_list = (ll_node*) (*traverse)->val;
-        // check first entry of read id list to see if it has a next node
-        if (read_id_list->next == NULL) {
-            // kmer has only one read id entry
+        int count = 1;
+        // check if number of reads exceeds cutoff
+        while (read_id_list->next != NULL && count <= ABUNDANCE_CUTOFF) {
+            count++;
+            read_id_list = read_id_list->next;
+        }
+
+        if (count <= ABUNDANCE_CUTOFF) {
+            // kmer has low occurence rate
             // free node and remove entry
-            free(read_id_list);
+            free((*traverse)->val);
             (*traverse)->val = NULL;
             // mark current node for removal
             iterate_level_two_hash(NULL, false, true);
@@ -801,13 +809,13 @@ struct ZHashTable* prune_data(struct ZHashTable* hash_table) {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     // initialize file and structures
-    FILE* file = fopen("reads.txt", "r");
+    FILE* file = fopen(argv[1], "r");
     struct ZHashTable* hash_table = zcreate_hash_table();
     
     // initialize variables
-    char read[50];
+    char read[READ_LENGTH];
     int read_id = 0;
     
     // get all the reads from file
