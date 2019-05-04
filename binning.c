@@ -99,10 +99,10 @@ int next_smaller_mmer(char* mmer, int mmer_score) {
 }
 
 // merge lists in the forward direction from a to b
-ll_node* merge_lists(int a_len, int b_len, ll_node* a, ll_node* b, bool forward) {
+ll_node* merge_lists(int a_len, int b_len, ll_node* aa, ll_node* bb, bool forward) {
     ll_node* temp = NULL;
     int i, len = a_len;
-
+ll_node* a = aa, *b = bb;
     // swap for backward direction
     if (!forward) {
         temp = a;
