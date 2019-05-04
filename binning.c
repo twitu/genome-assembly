@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "zhash.h"
-#include "bucket_sort.h"
 #include "llist.h"
 
 #define MMER_SIZE 4 // efficient to keep mmer_size as powers of 2
