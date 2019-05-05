@@ -483,7 +483,13 @@ kmer_extension_node find_kmer_extension(struct ZHashTable *hash_table, struct ZH
     // initialize signature mmer
     char compare_mmer[MMER_SIZE + 1];
     compare_mmer[MMER_SIZE] = '\0';
-    strncpy(&compare_mmer[1], key, MMER_SIZE - 1);
+    if (forward) {
+        // forward direction generates possible mmers from right end of kmer
+        strncpy(compare_mmer, &key[key_len - (MMER_SIZE - 1)], MMER_SIZE - 1);
+    } else {
+        // backward direction generated possible mmers from left end of kmer
+        strncpy(&compare_mmer[1], key, MMER_SIZE - 1);
+    }
 
     bool multiple_extension = false;
     struct ZHashEntry **extend_entry = NULL, **compare_entry = NULL;
@@ -493,7 +499,11 @@ kmer_extension_node find_kmer_extension(struct ZHashTable *hash_table, struct ZH
     // on the right end for forward direction or the left end for backward direction
     for (int i = 0; i < 4; i++)
     {
-        compare_mmer[MMER_SIZE - 1] = getbp(i);
+        if (forward) {
+            compare_mmer[MMER_SIZE - 1] = getbp(i);
+        } else {
+            compare_mmer[0] = getbp(i);
+        }
 
         if (getscore(compare_mmer) > mmer_score)
         {
@@ -567,7 +577,13 @@ kmer_extension_node more_kmer_extension(struct ZHashTable *hash_table, char *key
     // initialize signature mmer
     char compare_mmer[MMER_SIZE + 1];
     compare_mmer[MMER_SIZE] = '\0';
-    strncpy(compare_mmer, &key[key_len - (MMER_SIZE - 1)], MMER_SIZE - 1);
+    if (forward) {
+        // forward direction generates possible mmers from right end of kmer
+        strncpy(compare_mmer, &key[key_len - (MMER_SIZE - 1)], MMER_SIZE - 1);
+    } else {
+        // backward direction generated possible mmers from left end of kmer
+        strncpy(&compare_mmer[1], key, MMER_SIZE - 1);
+    }
 
     bool multiple_extension = false;
     struct ZHashEntry **extend_entry = NULL, **compare_entry = NULL;
@@ -577,7 +593,11 @@ kmer_extension_node more_kmer_extension(struct ZHashTable *hash_table, char *key
     // on the right end for forward direction or the left end for backward direction
     for (int i = 0; i < 4; i++)
     {
-        compare_mmer[MMER_SIZE - 1] = getbp(i);
+        if (forward) {
+            compare_mmer[MMER_SIZE - 1] = getbp(i);
+        } else {
+            compare_mmer[0] = getbp(i);
+        }
 
         if (getscore(compare_mmer) > mmer_score)
         {
