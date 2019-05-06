@@ -46,7 +46,7 @@ The kmer gives a score of 10058.
 | 1024 | 256 | 64 | 16 | 4 | 1 |
 | 0*1024 | 0*256 | 2*64 | 3*16 | 1*4 | 1*1 |
 The reverse complement given a score of 181 and hence only the kmer will be taken as a unique representation whenever either it or its reverse complement is encountered.
-### 1.2 Efficiently extracting kmers and signatures from read
+### 1.2 Efficiently extracting _kmers_ and _mmers_ from read
 The `main` function takes `input_file` and passes the read from each line to `process_read` function. 
 
 ```C
@@ -79,9 +79,9 @@ Similarly the reverse complement is computed and the alphabetically smaller is c
 | | | A | C | **A** | **C**  | **A** | **A** |
 The computer _mmer_ and _kmer_ are then stored in the two level hash structure.
 
-## Rename a file
+### 1.3 Pruning low abundance _kmers_
 
-You can rename the current file by clicking the file name in the navigation bar or by clicking the **Rename** button in the file explorer.
+ 
 
 ## Delete a file
 
@@ -211,5 +211,5 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTcxNDcwOTQ4Nl19
+eyJoaXN0b3J5IjpbLTczOTQxMTgwNiwtNzE0NzA5NDg2XX0=
 -->
