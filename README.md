@@ -78,9 +78,9 @@ Similarly the reverse complement is computed and the alphabetically smaller is c
 |||v||v||||
 | | | A | C | **A** | **C**  | **A** | **A** |when the kmer pointer crosses the mmer pointer, compare all mmers to get the smallest one
 Taking _canonical mmers_ halves the possible mmer values. Only the top row can be present as keys in `mmer_hash`.
-|AAAA|AAAG|..|CCCG|CCCT|
+|AAAA|AAAG|..|CTTG|CTTT|
 |:---:|:---:|:---:|:---:|:---:|
-|TTTT|TTTC|..|GGGC|GGGA|
+|TTTT|TTTC|..|GAAC|GAAA|
 The computed _mmer_ and _kmer_ are then stored in the two level hash structure. 
 
 ### 1.3 Storing read id data with kmer
@@ -124,8 +124,10 @@ Because the program uses two levels of hashing and the iterator uses static vari
 After pruning the data, the read id list is duplicated for each BP in the _kmer_ which produces a linked list of linked lists.
 
 ## 2. Extending kmers
-_Kmers_ can be extended in left (backward) and right (forward) direction. An extension is possible if a _kmer_ overlaps with only one other _kmer_ at `K-1` BP in the given direction. An example extension in the forward direction is shown below.
+_Kmers_ can be extended in left (backward) and right (forward) direction. An extension is possible if a _kmer_ overlaps with only one other _kmer_ at `K-1` BP in the given direction. A _kmer_ can be extended multiple times, it size changing each time as it grows. The purpose of this procedure is to efficiently extend all possible kmers that do not conflict or branch. This will reduce work being done in the branch resolution step.
 
+### 2.1  Merging valus of two extending kmers
+When two kmers are found for extension 
 |||||||||
 |--|--|--|--|--|--|--|--|--|
 | **A** | **A** | **G** | **T** | **C** | **C**  | |
@@ -141,7 +143,16 @@ _Kmers_ can be extended in left (backward) and right (forward) direction. An ext
 |   | 3 | 3 | 3 | 3 | 3  | |
 
 ### 2.1 Finding extension
-The algorithm for finding extensions exploits the total ordering of _mmers_. A _kmer_ can only be extended with _kmers_ having _mmer_ having score less than its own.
+The algorithm for finding extensions exploits the total ordering of _mmers_. A _kmer_ can only be extended with _kmers_ having _mmer_ having score less than equal its own in either direction. Trivially a _kmer_ corresponding to "CCCT" cannot be extended.
+
+1. iterate over _mmers_ in order of increasing score
+2. iterate over all _kmer_ entries in `hash_table` corresponding to current _mmer_
+3. check single BP extension of _kmer_ in current _kmer_ entry (there are only 4 possible extensions)
+4. if an extension yields a extension _mmer_ with score less than equal to current _mmer_, iterate over all entries of extension _mmer_
+5. for each _kmer_ entry in extension in extension _mmer_ table check for `K-1` BP overlap
+6. if only one _kmer_ satifies condition for current _kmer_ entry, then it is a valid extension
+
+
 
 ## Export a file
 
@@ -267,6 +278,6 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE3NDQ4MzY2NzEsOTI1MTUwMjk2LDE3NT
-MyNDA3OTQsLTcxNDcwOTQ4Nl19
+eyJoaXN0b3J5IjpbLTg2NTczNDk3MSw5MjUxNTAyOTYsMTc1Mz
+I0MDc5NCwtNzE0NzA5NDg2XX0=
 -->
