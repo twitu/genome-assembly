@@ -31,7 +31,7 @@ Various helper functions aid in conversion between the two forms.
    // calculates numeric score of "string" by summing numeric scores of all characters in the string
    int getscore(char *string)
 ```
-The scoring gives an easy method to evaluate which string is alphabetically smaller. 			       
+The scoring gives an easy method to evaluate which string is alphabetically smaller.
 
 > score(string_a)  > score(string_b) => string_a is alphabetically
 > smaller than string_b
@@ -45,7 +45,7 @@ The kmer gives a score of 10058.
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | 1024 | 256 | 64 | 16 | 4 | 1 |
 | 0*1024 | 0*256 | 2*64 | 3*16 | 1*4 | 1*1 |
-The reverse complement given a score of 181 and hence only the kmer will be taken as a unique representation whenever either it or its reverse complement is encountered.
+The reverse complement given a score of 181 and hence only the kmer will be taken as a unique representation whenever either it or its reverse complement is encountered. The selected string is a _canonical_ representaion.
 ### 1.2 Efficiently extracting _kmers_ and _mmers_ from read
 The `main` function takes `input_file` and passes the read from each line to `process_read` function. 
 
@@ -77,12 +77,16 @@ Similarly the reverse complement is computed and the alphabetically smaller is c
 | | **A** | **A** | **C** | **A** | G  | A | | score(AACA) > score(CAGA)
 |||v||v||||
 | | | A | C | **A** | **C**  | **A** | **A** |when the kmer pointer crosses the mmer pointer, compare all mmers to get the smallest one
-The computer _mmer_ and _kmer_ are then stored in the two level hash structure.
+Taking _canonical mmers_ halves the possible mmer values. Only the top row can be present as keys in `mmer_hash`.
+|AAAA|AAAG|..|CCCG|CCCT|
+|:---:|:---:|:---:|:---:|:---:|
+|TTTT|TTTC|..|GGGC|GGGA|
+The computed _mmer_ and _kmer_ are then stored in the two level hash structure. 
 ### 1.3 Storing read id data with kmer
-Each _kmer_ stores the read ids from which it has been derived. A linked list of read ids in the descending order is stored as the value `kmer_hash` entry where key is the _kmer_ string. After pruning the read id list is duplicated for each BP in the kmer and becomes a linked list of linked lists. 
+Each _kmer_ stores the read ids from which it has been derived. A linked list of read ids in the descending order is stored as the value `kmer_hash` entry where key is the _kmer_ string. Each read is numbered in by a counter. If a _kmer_ has occured before the new read id is added to the beginning of linked list.
 
 ### 1.4 Pruning low abundance _kmers_
-Due to errors in experiment BP can be misread. _Kmers_ derived from reads containing erroneous BP have low abundance in the dataset. 
+Due to errors in experiment BP can be misread. _Kmers_ derived from reads containing erroneous BP have low abundance in the dataset. To prune all the hash_tables have to be iterated through
  
 
 ## Delete a file
@@ -213,6 +217,6 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMjA4NjAyMTUyNiwxNzUzMjQwNzk0LC03MT
-Q3MDk0ODZdfQ==
+eyJoaXN0b3J5IjpbMTg5MTEzNzIwLDE3NTMyNDA3OTQsLTcxND
+cwOTQ4Nl19
 -->
