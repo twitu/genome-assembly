@@ -71,12 +71,12 @@ A sliding window of length `KMER_SIZE` is passed over the read to get the `kmer`
 Similarly the reverse complement is computed and the alphabetically smaller is computed. The _mmer_ computation is optimized to minimize passes.
 ||||||||||
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
-|v|v|||||||when the kmer pointer is behind, only compare mmer created by newly added character
-| G | **A** | **A** | **C** | **A** | G |  | | ||
-||vv|||||||score(AACA) > score(CAGA)
-| | **A** | **A** | **C** | **A** | G  | A | || 
-|||v||v|||| when the kmer pointer crosses the mmer pointer, compare all mmers to get the smallest one
-| | | A | C | **A** | **C**  | **A** | **A** |
+|v|v|||||||
+| G | **A** | **A** | **C** | **A** | G |  | | when the kmer pointer is behind mmer pointer, only compare mmer created by newly added character
+||vv|||||||
+| | **A** | **A** | **C** | **A** | G  | A | | score(AACA) > score(CAGA)
+|||v||v||||
+| | | A | C | **A** | **C**  | **A** | **A** |when the kmer pointer crosses the mmer pointer, compare all mmers to get the smallest one
 The computer _mmer_ and _kmer_ are then stored in the two level hash structure.
 
 ### 1.3 Pruning low abundance _kmers_
@@ -211,5 +211,5 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTczOTQxMTgwNiwtNzE0NzA5NDg2XX0=
+eyJoaXN0b3J5IjpbMTY5NzUwNzAsLTcxNDcwOTQ4Nl19
 -->
