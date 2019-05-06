@@ -82,12 +82,40 @@ Taking _canonical mmers_ halves the possible mmer values. Only the top row can b
 |:---:|:---:|:---:|:---:|:---:|
 |TTTT|TTTC|..|GGGC|GGGA|
 The computed _mmer_ and _kmer_ are then stored in the two level hash structure. 
+
 ### 1.3 Storing read id data with kmer
 Each _kmer_ stores the read ids from which it has been derived. A linked list of read ids in the descending order is stored as the value `kmer_hash` entry where key is the _kmer_ string. Each read is numbered in by a counter. If a _kmer_ has occured before the new read id is added to the beginning of linked list.
 
 ### 1.4 Pruning low abundance _kmers_
-Due to errors in experiment BP can be misread. _Kmers_ derived from reads containing erroneous BP have low abundance in the dataset. To prune all the hash_tables have to be iterated through
- 
+Due to errors in experiment BP can be misread. _Kmers_ derived from reads containing erroneous BP have low abundance in the dataset. The following algorithm is used to prune the data.
+
+> 1. iterate `mmer_hash`entries
+> 2. iterate `kmer_hash`entries in current `mmer_hash_entry`
+> 3. `count` number of nodes in read id list in current `kmer_hash_entry`
+> 4. if `count` is less than `ABUNDANCE_CUTOFF` mark for deletion
+> 5. when iteration is over if current `kmer_hash_entry` is empty delete it
+
+Efficient deletion safe iteration is performed by using a double indirection method.
+```C
+/**
+* Usage:
+* 1. Iteration: returns entries in hash_table one by one and NULL when no other entries left
+* hash_table: pass the same pointer while iterating it
+* indirection: false returns a pointer to the entry, true returns a pointer to the pointer of the entry
+* indirection is useful when modifying entries
+* remove_current: don't care
+* if deletion was called previously current entry is removed and next entry is returned
+* 2. Deletion: marks current entry for removal which is removed when next iteration in called
+* hash_table: pass NULL
+* indirection: don't care
+* remove_current: true
+* Note: be careful with deletion when performing nested iteration on the same hash_table
+*/
+void *iterate_level_one_hash(struct ZHashTable *hash_table, bool indirection, bool remove_current)
+```
+ The program maintains a 
+
+After pruning the data, the read id list is duplicated for each BP in the _kmer_ which produces a linked list of linked lists.
 
 ## Delete a file
 
@@ -217,6 +245,6 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTg5MTEzNzIwLDE3NTMyNDA3OTQsLTcxND
-cwOTQ4Nl19
+eyJoaXN0b3J5IjpbLTExMjA3NDA0MTgsMTc1MzI0MDc5NCwtNz
+E0NzA5NDg2XX0=
 -->
