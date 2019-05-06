@@ -5,7 +5,7 @@ Genome assembly using Next Generation Sequencing (NGS) techniques is a developin
 
 ##  1. Reading and Storing _kmers_
 
-The input to the program is file containing reads of DNA in each line. Each read is string of 4 possible characters {'A', 'C', 'G', 'T'} corresponding to the base pairs in DNA. All size K sub-strings of a read are its _kmers_. Since we cannot distinguish between two strands of the DNA we take the alphabetically smaller of the _kmer_ and its reverse complement. Each _kmer_ has a length M signature called an _mmer_ . We take the alphabetically smallest sub-string of length M to be the _mmer_.
+The input to the program is file containing reads of DNA in each line. Each read is string of 4 possible characters {'A', 'C', 'G', 'T'} corresponding to the base pairs (BP) in DNA. All size K sub-strings of a read are its _kmers_. Since we cannot distinguish between two strands of the DNA we take the alphabetically smaller of the _kmer_ and its reverse complement. Each _kmer_ has a length M signature called an _mmer_ . We take the alphabetically smallest sub-string of length M to be the _mmer_.
 
 **Example read and deriving kmers of length 6 from it, where the bold characters represent mmers of length 3**
 
@@ -17,8 +17,8 @@ The input to the program is file containing reads of DNA in each line. Each read
 
 The read information is stored in a two level hash structure. We shall refer to the first level as `mmer_hash` and the second level as `kmer_hash`. Each `mmer_hash` entry contains an _mmer_ as key and a `kmer_hash` table as value. The `kmer_hash` table contains all _kmers_ that share the same _mmer_  signature.
 
-### 1.1 Converting base pairs to numbers
-In various situations it is efficient and convenient to deal with base pairs as numbers. The programs performs the following mapping.
+### 1.1 Converting BP to numbers
+In various situations it is efficient and convenient to deal with BP as numbers. The programs performs the following mapping.
 | A | C | G | T |
 |--|--|--|--|
 | 3 | 2 | 1 | 0 |
@@ -80,7 +80,7 @@ Similarly the reverse complement is computed and the alphabetically smaller is c
 The computer _mmer_ and _kmer_ are then stored in the two level hash structure.
 
 ### 1.3 Pruning low abundance _kmers_
-Due to errors in experiment some base pairs can be misread. Reads containing erroneous base pair 
+Due to errors in experiment BP can be misread. _Kmers_ derived from reads containing erroneous BP have low abundance in the dataset. K
  
 
 ## Delete a file
@@ -211,5 +211,5 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTIwNzI0NDg5MTIsLTcxNDcwOTQ4Nl19
+eyJoaXN0b3J5IjpbODE0MTkxMDU3LC03MTQ3MDk0ODZdfQ==
 -->
