@@ -126,8 +126,8 @@ After pruning the data, the read id list is duplicated for each BP in the _kmer_
 ## 2. Extending kmers
 _Kmers_ can be extended in left (backward) and right (forward) direction. An extension is possible if a _kmer_ overlaps with only one other _kmer_ at `K-1` BP in the given direction. A _kmer_ can be extended multiple times, it size changing each time as it grows. The purpose of this procedure is to efficiently extend all possible kmers that do not conflict or branch. This will reduce work being done in the branch resolution step.
 
-### 2.1  Merging valus of two extending kmers
-When two kmers are found for extension 
+### 2.1  Merging values of two extending _kmers_
+When two _kmers_ are found for extension, there strings and read id lists are merged. The example demonstrates the results of a merging.
 |||||||||
 |--|--|--|--|--|--|--|--|--|
 | **A** | **A** | **G** | **T** | **C** | **C**  | |
@@ -141,6 +141,9 @@ When two kmers are found for extension
 | 7 | 11 | 11 | 11 | 11 | 11 | 11 |
 | 3 | 7 | 7 | 7 | 7 | 7  |7|
 |   | 3 | 3 | 3 | 3 | 3  | |
+The result of the extension is called a _unitig_. Before being stored back in the hash structure. It is checked for further extensions with other _kmers_ or _unitigs_ present in the hash structure. When no further extension is possible the _unitig_ is stored back in the hash structure.
+
+There is a fundamental difference between the first extension and further extensions. The first extension involves two hash entries which are then deleted and the _unitig_ information exists in an intermediate `struct more_kmer_extension_node`. Further extension occur with the intermediate structure and a hash entry which is deleted after extension.
 
 ### 2.1 Finding extension
 The algorithm for finding extensions exploits the total ordering of _mmers_. A _kmer_ can only be extended with _kmers_ having _mmer_ having score less than equal its own in either direction. Trivially a _kmer_ corresponding to "CCCT" cannot be extended.
@@ -152,6 +155,7 @@ The algorithm for finding extensions exploits the total ordering of _mmers_. A _
 5. for each _kmer_ entry in extension in extension _mmer_ table check for `K-1` BP overlap
 6. if only one _kmer_ satifies condition for current _kmer_ entry, then it is a valid extension
 
+For example
 
 
 ## Export a file
@@ -278,6 +282,6 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTg2NTczNDk3MSw5MjUxNTAyOTYsMTc1Mz
+eyJoaXN0b3J5IjpbMTM1ODMzNDA1Niw5MjUxNTAyOTYsMTc1Mz
 I0MDc5NCwtNzE0NzA5NDg2XX0=
 -->
