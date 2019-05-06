@@ -3,7 +3,8 @@
 
 Genome assembly using Next Generation Sequencing (NGS) techniques is a developing field. Recent interest in parallelising programs to make them time and memory efficient has lead most of the development. The following text attempts to provide an architectural overview of _unitig_ extension step. This is the first part of an experiment to use _unitigs_ in a parallel computation model.
 
-##  1. Reading and Storing _kmers_
+## Index
+## 1. Reading and Storing _kmers_
 
 The input to the program is file containing reads of DNA in each line. Each read is string of 4 possible characters {'A', 'C', 'G', 'T'} corresponding to the base pairs (BP) in DNA. All size K sub-strings of a read are its _kmers_. Since we cannot distinguish between two strands of the DNA we take the alphabetically smaller of the _kmer_ and its reverse complement. Each _kmer_ has a length M signature called an _mmer_ . We take the alphabetically smallest sub-string of length M to be the _mmer_.
 
@@ -46,7 +47,7 @@ The kmer gives a score of 10058.
 | 1024 | 256 | 64 | 16 | 4 | 1 |
 | 0*1024 | 0*256 | 2*64 | 3*16 | 1*4 | 1*1 |
 The reverse complement given a score of 181 and hence only the kmer will be taken as a unique representation whenever either it or its reverse complement is encountered. The selected string is a _canonical_ representaion.
-### 1.2 Efficiently extracting _kmers_ and _mmers_ from read
+### Efficiently extracting _kmers_ and _mmers_ from read
 The `main` function takes `input_file` and passes the read from each line to `process_read` function. 
 
 ```C
@@ -187,36 +188,10 @@ The example shows extension _mmers_, in the forward direction.
 ||||**C**| **A** | **A** | **G**
 ||||**C**| **A** | **A** | **T**
 
-Deleting entries selected for extension is tricky. Simultaneous nested iteration and deletion can cause memory corruption when both entries are adjacent and in the same `hash_table`. As shown below each case is to be individually handled to prevent missing entries or memory corruption.
+Deleting entries selected for extension is tricky. Simultaneous nested iteration and deletion can cause memory corruption when both entries are adjacent and in the same `hash_table`. The iterator cannot handle complex multiple deletions. As shown below each case is to be individually handled in find extension function to prevent missing entries or memory corruption. 
 
-
-## UML diagrams
-
-You can render UML diagrams using [Mermaid](https://mermaidjs.github.io/). For example, this will produce a sequence diagram:
-
-```mermaid
-sequenceDiagram
-Alice ->> Bob: Hello Bob, how are you?
-Bob-->>John: How about you John?
-Bob--x Alice: I am good thanks!
-Bob-x John: I am good thanks!
-Note right of John: Bob thinks a long<br/>long time, so long<br/>that the text does<br/>not fit on a row.
-
-Bob-->Alice: Checking with John...
-Alice->John: Yes... John, how are you?
-```
-
-And this will produce a flow chart:
-
-```mermaid
-graph LR
-A[Square Rect] -- Link text --> B((Circle))
-A --> C(Round Rect)
-B --> D{Rhombus}
-C --> D
-```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTMwMjM4NjQwMyw5MjUxNTAyOTYsMTc1Mz
-I0MDc5NCwtNzE0NzA5NDg2XX0=
+eyJoaXN0b3J5IjpbODYxMTk3MzA3LDkyNTE1MDI5NiwxNzUzMj
+QwNzk0LC03MTQ3MDk0ODZdfQ==
 -->
