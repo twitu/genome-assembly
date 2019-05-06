@@ -98,28 +98,34 @@ Due to errors in experiment BP can be misread. _Kmers_ derived from reads contai
 Efficient deletion safe iteration is performed by using a double indirection method.
 ```C
 /**
-* Usage:
-* 1. Iteration: returns entries in hash_table one by one and NULL when no other entries left
-* hash_table: pass the same pointer while iterating it
-* indirection: false returns a pointer to the entry, true returns a pointer to the pointer of the entry
-* indirection is useful when modifying entries
-* remove_current: don't care
-* if deletion was called previously current entry is removed and next entry is returned
-* 2. Deletion: marks current entry for removal which is removed when next iteration in called
-* hash_table: pass NULL
-* indirection: don't care
-* remove_current: true
-* Note: be careful with deletion when performing nested iteration on the same hash_table
+ * Usage:
+ * 1. Iteration: returns entries in hash_table one by one and NULL when no other entries left
+ * hash_table: pass the same pointer while iterating it
+ * indirection: false returns a pointer to the entry, true returns a pointer to the pointer of the entry
+ * indirection is useful when modifying entries
+ * remove_current: don't care
+ * if deletion was called previously current entry is removed and next entry is returned
+ * 2. Deletion: marks current entry for removal which is removed when next iteration in called
+ * hash_table: pass NULL
+ * indirection: don't care
+ * remove_current: true
+ * Note: be careful with deletion when performing nested iteration on the same hash_table
 */
 void *iterate_level_one_hash(struct ZHashTable *hash_table, bool indirection, bool remove_current)
 ```
- The program maintains a 
+ The program maintains `traversal` a pointer to a pointer to a `struct ZHashEntry` that is stored in the passed hash_table.
+ * On each iteration call the current entry is returned and `traversal` is moved ahead, entry by entry chain by chain. 
+ * On deletion is called, the current entry is marked. On the next iteration call the current entry is freed, `traversal` points to the next entry after current and the same is returned. 
+
+The diagram below shows deletion and iteration for one chain in the `hash_table`
+
+Because the program uses two levels of hashing and the iterator uses static variables to maintain state of currently iterating `hash_table`, two identical iterators (except their name) have been implemented to allow nested iteration.
 
 After pruning the data, the read id list is duplicated for each BP in the _kmer_ which produces a linked list of linked lists.
 
-## Delete a file
+## 2. Extending kmers
 
-You can delete the current file by clicking the **Remove** button in the file explorer. The file will be moved into the **Trash** folder and automatically deleted after 7 days of inactivity.
+
 
 ## Export a file
 
@@ -245,6 +251,6 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTExMjA3NDA0MTgsMTc1MzI0MDc5NCwtNz
-E0NzA5NDg2XX0=
+eyJoaXN0b3J5IjpbMTk5MDk2OTY1MywxNzUzMjQwNzk0LC03MT
+Q3MDk0ODZdfQ==
 -->
