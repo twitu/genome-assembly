@@ -128,16 +128,20 @@ _Kmers_ can be extended in left (backward) and right (forward) direction. An ext
 
 |||||||||
 |--|--|--|--|--|--|--|--|--|
-| A | A | G | T | C | C  | |
+| **A** | **A** | **G** | **T** | **C** | **C**  | |
 | 7 | 7 | 7 | 7 | 7 | 7  | |
 | 3 | 3 | 3 | 3 | 3 | 3  | |
-| | A | G | T | C | C  | A |
+| | **A** | **G** | **T** | **C** | **C**  | **A** |
 ||11|11|11|11|11|11|
 ||7|7|7|7|7|7|
-| A | A | G | T | C | C  | A |
-||11|11|11|11|11|11|
-| 7 | 7 | 7 | 7 | 7 | 7  | |
-| 3 | 3 | 3 | 3 | 3 | 3  | |
+|-|-|-|-|-|-|-|
+| **A** | **A** | **G** | **T** | **C** | **C**  | **A** |
+| 7 | 11 | 11 | 11 | 11 | 11 | 11 |
+| 3 | 7 | 7 | 7 | 7 | 7  |7|
+|   | 3 | 3 | 3 | 3 | 3  | |
+
+### 2.1 Finding extension
+
 
 ## Export a file
 
@@ -263,6 +267,6 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTEyMDM0MTQ2NTYsMTc1MzI0MDc5NCwtNz
-E0NzA5NDg2XX0=
+eyJoaXN0b3J5IjpbOTI1MTUwMjk2LDE3NTMyNDA3OTQsLTcxND
+cwOTQ4Nl19
 -->
