@@ -141,22 +141,53 @@ When two _kmers_ are found for extension, there strings and read id lists are me
 | 7 | 11 | 11 | 11 | 11 | 11 | 11 |
 | 3 | 7 | 7 | 7 | 7 | 7  |7|
 |   | 3 | 3 | 3 | 3 | 3  | |
+Linked lists of read ids for the overlapping entries merges them in sorted order removing any  duplicate occurences. A new string is allocated for creating the merged _kmer_ string.
+```C
+// return new list of read id lists where continuous range of KMER_SIZE - 1 nodes of a_node and b_node are merged
+// forward direction merges right end of a_node with left end of b_node
+// backward direction merges right end of b_node with left end of a_node
+ll_node *merge_lists(int a_len, int b_len, ll_node *a_node, ll_node *b_node, bool forward)
+
+// returns merged key of a_key and b_key which overlap at continuous KMER_SIZE - 1 base pairs
+// forward direction merges right end of a_key with left end of b_key
+// backward direction merges right end of b_key with left end of a_key
+char *merge_keys(int a_len, int b_len, char *a_key, char *b_key, bool forward)
+
+// extends to kmer entries pointed to by given hash entries in given direction
+// returns node containing pointer to merged kmer and read id list
+// Note: does not free given a and b hash table entries
+more_kmer_extension_node extend_kmers(struct ZHashEntry *a, struct ZHashEntry *b, bool forward)
+
+// takes partially extended kmer and extends with kmer in hash entry b
+// returns node containing pointer to merged kmer and read id list
+// Note: manages de-allocation of memory for previous key
+more_kmer_extension_node further_extend_kmers(more_kmer_extension_node a, struct ZHashEntry *b, bool forward)
+```
+
 The result of the extension is called a _unitig_. Before being stored back in the hash structure. It is checked for further extensions with other _kmers_ or _unitigs_ present in the hash structure. When no further extension is possible the _unitig_ is stored back in the hash structure.
 
 There is a fundamental difference between the first extension and further extensions. The first extension involves two hash entries which are then deleted and the _unitig_ information exists in an intermediate `struct more_kmer_extension_node`. Further extension occur with the intermediate structure and a hash entry which is deleted after extension.
 
-### 2.1 Finding extension
+### 2.2 Finding extension
 The algorithm for finding extensions exploits the total ordering of _mmers_. A _kmer_ can only be extended with _kmers_ having _mmer_ having score less than equal its own in either direction. Trivially a _kmer_ corresponding to "CCCT" cannot be extended.
 
-1. iterate over _mmers_ in order of increasing score
-2. iterate over all _kmer_ entries in `hash_table` corresponding to current _mmer_
-3. check single BP extension of _kmer_ in current _kmer_ entry (there are only 4 possible extensions)
-4. if an extension yields a extension _mmer_ with score less than equal to current _mmer_, iterate over all entries of extension _mmer_
-5. for each _kmer_ entry in extension in extension _mmer_ table check for `K-1` BP overlap
-6. if only one _kmer_ satifies condition for current _kmer_ entry, then it is a valid extension
+> 1. iterate over _mmers_ in order of increasing score
+> 2. iterate over all _kmer_ entries in `hash_table` corresponding to current _mmer_
+> 3. check single BP extension of _kmer_ in current _kmer_ entry (there are only 4 possible extensions)
+> 4. if an extension yields a extension _mmer_ with score less than equal to current _mmer_, iterate over all entries of extension _mmer_
+> 5. for each _kmer_ entry in extension in extension _mmer_ table check for `K-1` BP overlap
+> 6. if only one _kmer_ satifies condition for current _kmer_ entry, then it is a valid extension
 
-For example
+the example shows extension _mmers_, in the forward direction.
+|||||||||
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **C** | **C** | **G** | **C** | A | A |
+||||**C**| **A** | **A** | **A**
+||||**C**| **A** | **A** | **C**
+||||**C**| **A** | **A** | **G**
+||||**C**| **A** | **A** | **T**
 
+Deleting entries selected for extension is tricky. Simultaneous nested iteration and deletion can cause memory corruption when both entries are adjacent and in the same `hash_table`. As shown below each case is to be individually handled to prevent missing entries or memory corruption.
 
 ## Export a file
 
@@ -282,6 +313,6 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTM1ODMzNDA1Niw5MjUxNTAyOTYsMTc1Mz
+eyJoaXN0b3J5IjpbMTc0ODQzOTU0NSw5MjUxNTAyOTYsMTc1Mz
 I0MDc5NCwtNzE0NzA5NDg2XX0=
 -->
