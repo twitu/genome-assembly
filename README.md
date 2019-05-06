@@ -141,7 +141,7 @@ _Kmers_ can be extended in left (backward) and right (forward) direction. An ext
 |   | 3 | 3 | 3 | 3 | 3  | |
 
 ### 2.1 Finding extension
-
+The algorithm for finding extensions exploits the total ordering of _mmers_. A _kmer_ can only be extended with _kmers_ having _mmer_ having score less than its own.
 
 ## Export a file
 
@@ -267,6 +267,6 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbOTI1MTUwMjk2LDE3NTMyNDA3OTQsLTcxND
-cwOTQ4Nl19
+eyJoaXN0b3J5IjpbLTE3NDQ4MzY2NzEsOTI1MTUwMjk2LDE3NT
+MyNDA3OTQsLTcxNDcwOTQ4Nl19
 -->
