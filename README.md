@@ -78,9 +78,11 @@ Similarly the reverse complement is computed and the alphabetically smaller is c
 |||v||v||||
 | | | A | C | **A** | **C**  | **A** | **A** |when the kmer pointer crosses the mmer pointer, compare all mmers to get the smallest one
 The computer _mmer_ and _kmer_ are then stored in the two level hash structure.
+### 1.3 Storing read id data with kmer
+Each kmer 
 
-### 1.3 Pruning low abundance _kmers_
-Due to errors in experiment BP can be misread. _Kmers_ derived from reads containing erroneous BP have low abundance in the dataset. K
+### 1.4 Pruning low abundance _kmers_
+Due to errors in experiment BP can be misread. _Kmers_ derived from reads containing erroneous BP have low abundance in the dataset. 
  
 
 ## Delete a file
@@ -211,5 +213,5 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbODE0MTkxMDU3LC03MTQ3MDk0ODZdfQ==
+eyJoaXN0b3J5IjpbMTc1MzI0MDc5NCwtNzE0NzA5NDg2XX0=
 -->
