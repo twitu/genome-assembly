@@ -79,7 +79,7 @@ Similarly the reverse complement is computed and the alphabetically smaller is c
 | | | A | C | **A** | **C**  | **A** | **A** |when the kmer pointer crosses the mmer pointer, compare all mmers to get the smallest one
 The computer _mmer_ and _kmer_ are then stored in the two level hash structure.
 ### 1.3 Storing read id data with kmer
-Each kmer 
+Each _kmer_ stores the read ids from which it has been derived. A linked list of read ids in the descending order is stored as the value `kmer_hash` entry where key is the _kmer_ string. After pruning the read id list is duplicated for each BP in the kmer and becomes a linked list of linked lists. 
 
 ### 1.4 Pruning low abundance _kmers_
 Due to errors in experiment BP can be misread. _Kmers_ derived from reads containing erroneous BP have low abundance in the dataset. 
@@ -213,5 +213,6 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTc1MzI0MDc5NCwtNzE0NzA5NDg2XX0=
+eyJoaXN0b3J5IjpbMjA4NjAyMTUyNiwxNzUzMjQwNzk0LC03MT
+Q3MDk0ODZdfQ==
 -->
