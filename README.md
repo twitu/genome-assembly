@@ -124,8 +124,20 @@ Because the program uses two levels of hashing and the iterator uses static vari
 After pruning the data, the read id list is duplicated for each BP in the _kmer_ which produces a linked list of linked lists.
 
 ## 2. Extending kmers
+_Kmers_ can be extended in left (backward) and right (forward) direction. An extension is possible if a _kmer_ overlaps with only one other _kmer_ at `K-1` BP in the given direction. An example extension in the forward direction is shown below.
 
-
+|||||||||
+|--|--|--|--|--|--|--|--|--|
+| A | A | G | T | C | C  | |
+| 7 | 7 | 7 | 7 | 7 | 7  | |
+| 3 | 3 | 3 | 3 | 3 | 3  | |
+| | A | G | T | C | C  | A |
+||11|11|11|11|11|11|
+||7|7|7|7|7|7|
+| A | A | G | T | C | C  | A |
+||11|11|11|11|11|11|
+| 7 | 7 | 7 | 7 | 7 | 7  | |
+| 3 | 3 | 3 | 3 | 3 | 3  | |
 
 ## Export a file
 
@@ -251,6 +263,6 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTk5MDk2OTY1MywxNzUzMjQwNzk0LC03MT
-Q3MDk0ODZdfQ==
+eyJoaXN0b3J5IjpbLTEyMDM0MTQ2NTYsMTc1MzI0MDc5NCwtNz
+E0NzA5NDg2XX0=
 -->
