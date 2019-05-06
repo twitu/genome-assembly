@@ -4,6 +4,14 @@
 Genome assembly using Next Generation Sequencing (NGS) techniques is a developing field. Recent interest in parallelising programs to make them time and memory efficient has lead most of the development. The following text attempts to provide an architectural overview of _unitig_ extension step. This is the first part of an experiment to use _unitigs_ in a parallel computation model.
 
 ## Index
+1. [Reading and Storing _kmers_](Reading and Storing _kmers_)
+1.1 [Converting BP to numbers](https://github.com/twitu/genome-assembly#11-converting-bp-to-numbers)
+1.2 [Efficiently extracting _kmers_ and _mmers_ from read](https://github.com/twitu/genome-assembly#12-efficiently-extracting-kmers-and-mmers-from-read)
+1.3 [Storing read id data with kmer](https://github.com/twitu/genome-assembly#13-storing-read-id-data-with-kmer)
+1.4 [Pruning low abundance _kmers_](https://github.com/twitu/genome-assembly#14-pruning-low-abundance-kmers)
+2. [Extending kmers](https://github.com/twitu/genome-assembly#2-extending-kmers)
+2.1 [Merging values of two extending _kmers_](https://github.com/twitu/genome-assembly#21-finding-extension)
+2.2 [Finding _kmer_ extensions]()
 ## 1. Reading and Storing _kmers_
 
 The input to the program is file containing reads of DNA in each line. Each read is string of 4 possible characters {'A', 'C', 'G', 'T'} corresponding to the base pairs (BP) in DNA. All size K sub-strings of a read are its _kmers_. Since we cannot distinguish between two strands of the DNA we take the alphabetically smaller of the _kmer_ and its reverse complement. Each _kmer_ has a length M signature called an _mmer_ . We take the alphabetically smallest sub-string of length M to be the _mmer_.
@@ -169,7 +177,7 @@ The result of the extension is called a _unitig_. Before being stored back in th
 
 There is a fundamental difference between the first extension and further extensions. The first extension involves two hash entries which are then deleted and the _unitig_ information exists in an intermediate `struct more_kmer_extension_node`. Further extension occur with the intermediate structure and a hash entry which is deleted after extension.
 
-### 2.2 Finding extension
+### 2.2 Finding _kmer_ extensions
 The algorithm for finding extensions exploits the total ordering of _mmers_. A _kmer_ can only be extended with _kmers_ having _mmer_ having score less than equal its own in either direction. Trivially a _kmer_ corresponding to "CCCT" cannot be extended.
 
 > 1. iterate over _mmers_ in order of increasing score
@@ -192,6 +200,6 @@ Deleting entries selected for extension is tricky. Simultaneous nested iteration
 
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbODYxMTk3MzA3LDkyNTE1MDI5NiwxNzUzMj
-QwNzk0LC03MTQ3MDk0ODZdfQ==
+eyJoaXN0b3J5IjpbNzUxMjA2MzksOTI1MTUwMjk2LDE3NTMyND
+A3OTQsLTcxNDcwOTQ4Nl19
 -->
