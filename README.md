@@ -80,7 +80,7 @@ Similarly the reverse complement is computed and the alphabetically smaller is c
 The computer _mmer_ and _kmer_ are then stored in the two level hash structure.
 
 ### 1.3 Pruning low abundance _kmers_
-
+Due to errors in experiment some base pairs can be misread. Reads containing erroneous base pair 
  
 
 ## Delete a file
@@ -211,5 +211,5 @@ C --> D
 ```
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTY5NzUwNzAsLTcxNDcwOTQ4Nl19
+eyJoaXN0b3J5IjpbLTIwNzI0NDg5MTIsLTcxNDcwOTQ4Nl19
 -->
