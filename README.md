@@ -141,7 +141,7 @@ void *iterate_level_one_hash(struct ZHashTable *hash_table, bool indirection, bo
  * On each iteration call the current entry is returned and `traversal` is moved ahead, entry by entry chain by chain. 
  * On deletion is called, the current entry is marked. On the next iteration call the current entry is freed, however `traversal` is not modified. Instead the pointer it points to contains the location of the next entry after current.
 
-The diagram below shows deletion and iteration for one chain in the `hash_table`. When deletion is 
+The diagram below shows deletion and iteration for one chain in the `hash_table`. When deletion is called for the entry pointed to by pointer referenced by `iterator`.
 
 ![iteration deletion](./img/iteration_deletion.svg)
 
@@ -218,7 +218,7 @@ The example shows extension _mmers_, in the forward direction.
 ||||**C**| **A** | **A** | **G**
 ||||**C**| **A** | **A** | **T**
 
-**Deleting entries selected for extension is tricky**. Simultaneous nested iteration and deletion can cause memory corruption when both entries are adjacent and in the same `hash_table`. The iterator cannot handle complex multiple deletions. As shown below each case is to be individually handled in find extension function to prevent missing entries or memory corruption. 
+**Deleting entries selected for extension is tricky**. Simultaneous nested iteration and deletion can cause memory corruption when both entries are adjacent and in the same `hash_table`. The iterator cannot handle complex multiple deletions. The example shows `extension_a` which refers to `extension_b` where both are to be deleted, a similar case can occur when `extension_b` refers to `extension_a`. Each case has to be handled the find extension function to prevent skipping entries or memory corruption. 
 
 ![safe deletion](./img/safe_deletion.svg)
 
@@ -230,6 +230,6 @@ The example shows extension _mmers_, in the forward direction.
 4. Algorithm for variable length unitig extension
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTQxMTcwMzExNCw5MjUxNTAyOTYsMTc1Mz
-I0MDc5NCwtNzE0NzA5NDg2XX0=
+eyJoaXN0b3J5IjpbMjkxNjEwNDE5LDE0MTE3MDMxMTQsOTI1MT
+UwMjk2LDE3NTMyNDA3OTQsLTcxNDcwOTQ4Nl19
 -->
