@@ -14,7 +14,7 @@ Genome assembly using Next Generation Sequencing (NGS) techniques is a developin
 
 ## 1. Reading and Storing _kmers_
 
-The input to the program is a file containing reads of DNA in each line. Each read is a string of 4 possible characters {'A', 'C', 'G', 'T'} corresponding to the base pairs (BP) in DNA. **All size K sub-strings of a read are its _kmers_**. Since we cannot distinguish between two strands of the DNA, we take the alphabetically smaller of the _kmer_ and its reverse complement. **Each _kmer_ has a length M signature called a _mmer_ **. We take the alphabetically smallest sub-string of length M to be the _mmer_.
+The input to the program is a file containing reads of DNA in each line. Each read is a string of 4 possible characters {'A', 'C', 'G', 'T'} corresponding to the base pairs (BP) in DNA. **All size K sub-strings of a read are its _kmers_**. Since we cannot distinguish between two strands of the DNA, we take the alphabetically smaller of the _kmer_ and its reverse complement. **Each _kmer_ has a length M signature called a _mmer_**. We take the alphabetically smallest sub-string of length M to be the _mmer_.
 
 **Example read and deriving _kmers_ of length 6 from it, where the bold characters represent _mmers_ of length 3**
 
