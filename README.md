@@ -1,7 +1,6 @@
-
 # Parallelising De Novo Genome assembler - an architecture overview
 
-Genome assembly using Next Generation Sequencing (NGS) techniques is a developing field. Recent interest in parallelising programs to make them time and memory efficient has lead most of the development. The following text attempts to provide an architectural overview of _unitig_ extension step. This is the first part of an experiment to use _unitigs_ in a parallel computation model.
+Genome assembly using Next Generation Sequencing (NGS) techniques is a developing field. Recent interest in parallelizing programs to make them time and memory efficient has lead most of the development. The following text attempts to provide an architectural overview of _unitig_ extension step. It is the first part of an experiment to use _unitigs_ in a parallel computation model.
 
 ## Index
 1. [Reading and Storing _kmers_](#1-reading-and-storing-kmers)  
@@ -15,7 +14,7 @@ Genome assembly using Next Generation Sequencing (NGS) techniques is a developin
 
 ## 1. Reading and Storing _kmers_
 
-The input to the program is file containing reads of DNA in each line. Each read is string of 4 possible characters {'A', 'C', 'G', 'T'} corresponding to the base pairs (BP) in DNA. **All size K sub-strings of a read are its _kmers_**. Since we cannot distinguish between two strands of the DNA we take the alphabetically smaller of the _kmer_ and its reverse complement. **Each _kmer_ has a length M signature called an _mmer_** . We take the alphabetically smallest sub-string of length M to be the _mmer_.
+The input to the program is a file containing reads of DNA in each line. Each read is a string of 4 possible characters {'A', 'C', 'G', 'T'} corresponding to the base pairs (BP) in DNA. **All size K sub-strings of a read are its _kmers_**. Since we cannot distinguish between two strands of the DNA, we take the alphabetically smaller of the _kmer_ and its reverse complement. **Each _kmer_ has a length M signature called a _mmer_ **. We take the alphabetically smallest sub-string of length M to be the _mmer_.
 
 **Example read and deriving _kmers_ of length 6 from it, where the bold characters represent _mmers_ of length 3**
 
@@ -25,10 +24,10 @@ The input to the program is file containing reads of DNA in each line. Each read
 | | **A** | **G** | **T** | C | C  | A | | |
 | | | G | T | C | **C**  | **A** | **T** | |
 
-The read information is stored in a two level hash structure. We shall refer to the first level as `mmer_hash` and the second level as `kmer_hash`. Each `mmer_hash` entry contains an _mmer_ as key and a `kmer_hash` table as value. The `kmer_hash` table contains all _kmers_ that share the same _mmer_  signature.
+The read information is stored in a two-level hash structure. We shall refer to the first level as `mmer_hash` and the second level as `kmer_hash`. Each `mmer_hash` entry contains a _mmer_ as key and a `kmer_hash` table as value. The `kmer_hash` table contains all _kmers_ that share the same _mmer_  signature.
 
 ### 1.1 Converting BP to numbers
-In various situations it is efficient and convenient to deal with BP as numbers. The programs performs the following mapping.
+In various situations, it is efficient and convenient to deal with BP as numbers. The program performs the following mapping.
 
 | A | C | G | T |
 |--|--|--|--|
@@ -36,9 +35,9 @@ In various situations it is efficient and convenient to deal with BP as numbers.
 
 Various helper functions aid in conversion between the two forms. 
 ```C
-   // converts numeric value of bp to its ascii value
+   // converts numeric value of bp to its ASCII value
    char getbp(int bp)
-   // converts ascii character to its numeric value
+   // converts ASCII character to its numeric value
    int getval(char c)
    // calculates numeric score of "string" by summing numeric scores of all characters in the string
    int getscore(char *string)
@@ -60,9 +59,9 @@ The kmer gives a score of 10058.
 | 1024 | 256 | 64 | 16 | 4 | 1 |
 | 0*1024 | 0*256 | 2*64 | 3*16 | 1*4 | 1*1 |
 
-The reverse complement given a score of 181. Only the kmer, since it has a higher score, will be taken as a unique representation whenever either it or its reverse complement is encountered. **The selected string is a _canonical_ representaion**.
+The reverse complement scores 81. Only the kmer, since it has a higher score, will be taken as the unique representation whenever either it or its reverse complement is encountered. **The selected string is a _canonical_ representaion**.
 
-### Efficiently extracting _kmers_ and _mmers_ from read
+### Efficiently extracting _kmers_ and _mmers_ from a read
 The `main` function takes `input_file` and passes the read from each line to `process_read` function. 
 
 ```C
@@ -86,7 +85,7 @@ A sliding window of length `KMER_SIZE` is passed over the read to get the `kmer`
 | | A | G | T | C | C  | A | |
 | | 3072 | 256 | 0 | 32 | 8 | 3 | (10058 - 3072)*4 + 3
 
-Similarly the reverse complement is computed and the alphabetically smaller is taken. The _mmer_ computation is optimized to minimize passes.
+Similarly, the reverse complement is computed and the alphabetically smaller is taken. The _mmer_ computation is optimized to minimize passes.
 
 ||||||||||
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
@@ -103,15 +102,15 @@ Taking _canonical mmers_ halves the possible mmer values. Only the top row can b
 |:---:|:---:|:---:|:---:|:---:|
 |TTTT|TTTC|..|GAAC|GAAA|
 
-The computed _mmer_ and _kmer_ are then stored in the two level hash structure. 
+The computed _mmer_ and _kmer_ are stored in a two-level hash structure. 
 
 ### 1.3 Storing read id data with kmer
-Each _kmer_ stores the read ids from which it has been derived. A linked list of read ids in the descending order is stored as the value `kmer_hash` entry where key is the _kmer_ string. Each read is numbered in by a counter. If a _kmer_ has occured before the new read id is added to the beginning of linked list.
+Each _kmer_ stores the read ids from which it has been derived. A linked list of read ids in the descending order is stored as the value `kmer_hash` entry where the key is the _kmer_ string. Each read is numbered in by a counter. If a _kmer_ has occurred before the new read id is added to the beginning of the linked list.
 
 ![two level hash structure](./img/two_level_hash.svg)
 
 ### 1.4 Pruning low abundance _kmers_
-Due to errors in experiment BP can be misread. _Kmers_ derived from reads containing erroneous BP have low abundance in the dataset. The following algorithm is used to prune the data.
+Due to errors in experiment, BP can be misread. _Kmers_ derived from reads containing erroneous BP have low abundance in the dataset. The following algorithm is used to prune the data.
 
 > 1. iterate `mmer_hash`entries
 > 2. iterate `kmer_hash`entries in current `mmer_hash_entry`
@@ -128,7 +127,7 @@ Efficient deletion safe iteration is performed by using a double indirection met
  * indirection: false returns a pointer to the entry, true returns a pointer to the pointer of the entry
  * indirection is useful when modifying entries
  * remove_current: don't care
- * if deletion was called previously current entry is removed and next entry is returned
+ * if deletion was called previously, current entry is removed and next entry is returned
  * 2. Deletion: marks current entry for removal which is removed when next iteration in called
  * hash_table: pass NULL
  * indirection: don't care
@@ -138,14 +137,14 @@ Efficient deletion safe iteration is performed by using a double indirection met
 void *iterate_level_one_hash(struct ZHashTable *hash_table, bool indirection, bool remove_current)
 ```
  The program maintains `traversal` a pointer to a pointer to a `struct ZHashEntry` that is stored in the passed hash_table.
- * On each iteration call the current entry is returned and `traversal` is moved ahead, entry by entry chain by chain. 
- * On deletion is called, the current entry is marked. On the next iteration call the current entry is freed, however `traversal` is not modified. Instead the pointer it points to contains the location of the next entry after current.
+ * On each iteration the current entry is returned and `traversal` is moved ahead, entry by entry chain by chain. 
+ * On deletion is called, the current entry is marked. On the next iteration call the current entry is freed, however `traversal` is not modified. Instead, the pointer it points to contains the location of the next entry after current.
 
 The diagram below shows deletion and iteration for one chain in the `hash_table`. When deletion is called for the entry pointed to by pointer referenced by `iterator`.
 
 ![iteration deletion](./img/iteration_deletion.svg)
 
-Because the program uses two levels of hashing and the iterator uses static variables to maintain state of currently iterating `hash_table`, two identical iterators (except their name) have been implemented to allow nested iteration.
+Because the program uses two levels of hashing and the iterator uses static variables to maintain the state of currently iterating `hash_table`, two identical iterators (except their name) have been implemented to allow nested iteration.
 
 After pruning the data, the read id list is duplicated for each BP in the _kmer_ which produces a linked list of linked lists.
 
@@ -155,7 +154,7 @@ After pruning the data, the read id list is duplicated for each BP in the _kmer_
 _Kmers_ can be extended in left (backward) and right (forward) direction. **An extension is possible if a _kmer_ overlaps with only one other _kmer_ at `K-1` BP in a given direction**. A _kmer_ can be extended multiple times, it size changing each time as it grows. The purpose of this procedure is to efficiently extend all possible kmers that do not conflict or branch. This will reduce work being done in the branch resolution step.
 
 ### 2.1  Merging values of two extending _kmers_
-When two _kmers_ are found for extension, there strings and read id lists are merged. The example demonstrates the results of a merging.
+When two _kmers_ are found for an extension, there strings and read id lists are merged. The example demonstrates the results of a merging.
 
 ||||||||
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -171,19 +170,19 @@ When two _kmers_ are found for extension, there strings and read id lists are me
 | 3 | 7 | 7 | 7 | 7 | 7  |7|
 |   | 3 | 3 | 3 | 3 | 3  | |
 
-Linked lists of read ids for the overlapping entries merges them in sorted order removing any  duplicate occurences. A new string is allocated for creating the merged _kmer_ string.
+Linked lists of read ids for the overlapping entries merge them in sorted order removing any duplicate occurrences. A new string is allocated for creating the merged _kmer_ string.
 ```C
-// return new list of read id lists where continuous range of KMER_SIZE - 1 nodes of a_node and b_node are merged
-// forward direction merges right end of a_node with left end of b_node
-// backward direction merges right end of b_node with left end of a_node
+// return a new list of read id lists where continuous range of KMER_SIZE - 1 nodes of a_node and b_node are merged
+// forward direction merges right end of a_node with the left end of b_node
+// backward direction merges right end of b_node with the left end of a_node
 ll_node *merge_lists(int a_len, int b_len, ll_node *a_node, ll_node *b_node, bool forward)
 
 // returns merged key of a_key and b_key which overlap at continuous KMER_SIZE - 1 base pairs
-// forward direction merges right end of a_key with left end of b_key
-// backward direction merges right end of b_key with left end of a_key
+// forward direction merges right end of a_key with the left end of b_key
+// backward direction merges right end of b_key with the left end of a_key
 char *merge_keys(int a_len, int b_len, char *a_key, char *b_key, bool forward)
 
-// extends to kmer entries pointed to by given hash entries in given direction
+// extends to kmer entries pointed to by given hash entries in the given direction
 // returns node containing pointer to merged kmer and read id list
 // Note: does not free given a and b hash table entries
 more_kmer_extension_node extend_kmers(struct ZHashEntry *a, struct ZHashEntry *b, bool forward)
@@ -194,19 +193,19 @@ more_kmer_extension_node extend_kmers(struct ZHashEntry *a, struct ZHashEntry *b
 more_kmer_extension_node further_extend_kmers(more_kmer_extension_node a, struct ZHashEntry *b, bool forward)
 ```
 
-The result of the extension is called a _unitig_. Before being stored back in the hash structure. It is checked for further extensions with other _kmers_ or _unitigs_ present in the hash structure. When no further extension is possible the _unitig_ is stored back in the hash structure.
+The result of the extension is called a _unitig_. Before being stored back in the hash structure, it is checked for further extensions with other _kmers_ or _unitigs_ present in the hash structure. When no further extension is possible, the _unitig_ is stored back in the hash structure.
 
-There is a **fundamental difference between the first extension and further extensions**. The first extension involves two hash entries which are then deleted and the _unitig_ information exists in an intermediate `struct more_kmer_extension_node`. Further extension occur with the intermediate structure and a hash entry which is deleted after extension.
+There is a **fundamental difference between the first extension and further extensions**. The first extension involves two hash entries which are then deleted and the _unitig_ information exists in an intermediate `struct more_kmer_extension_node`. Further extension occurs with the intermediate structure and a hash entry which is deleted after extension.
 
 ### 2.2 Finding _kmer_ extensions
-The algorithm for finding extensions exploits the total ordering of _mmers_. A _kmer_ can only be extended with _kmers_ having _mmer_ having score less than equal its own in either direction. Trivially a _kmer_ corresponding to "CCCT" cannot be extended.
+The algorithm for finding extensions exploits the total ordering of _mmers_. A _kmer_ can only be extended with _kmers_ having _mmer_ having scored less than equal its own in either direction. Trivially a _kmer_ corresponding to "CCCT" cannot be extended.
 
 > 1. iterate over _mmers_ in order of increasing score
 > 2. iterate over all _kmer_ entries in `hash_table` corresponding to current _mmer_
 > 3. check _mmers_ created by single BP extension of _kmer_ in current _kmer_ entry (there are only 4 possible extensions)
-> 4. if an extended _kmer_ yields a extension _mmer_ with score less than equal to current _mmer_, iterate over all entries of extension _mmer_
+> 4. if an extended _kmer_ yields an extension _mmer_ with a score less than equal to current _mmer_, iterate over all entries of extension _mmer_
 > 5. for each _kmer_ entry in extension _mmer_ table check for `K-1` BP overlap
-> 6. if only one _kmer_ satisfies condition for current _kmer_ entry, then it is a valid extension
+> 6. if only one _kmer_ satisfies the condition for current _kmer_ entry, then it is a valid extension
 
 The example shows extension _mmers_, in the forward direction.
 
@@ -218,18 +217,13 @@ The example shows extension _mmers_, in the forward direction.
 ||||**C**| **A** | **A** | **G**
 ||||**C**| **A** | **A** | **T**
 
-**Deleting entries selected for extension is tricky**. Simultaneous nested iteration and deletion can cause memory corruption when both entries are adjacent and in the same `hash_table`. The iterator cannot handle complex multiple deletions. The example shows `extension_a` which refers to `extension_b` where both are to be deleted, a similar case can occur when `extension_b` refers to `extension_a`. Each case has to be handled the find extension function to prevent skipping entries or memory corruption. 
+**Deleting entries selected for an extension is tricky**. Simultaneous nested iteration and deletion can cause memory corruption when both entries are adjacent and in the same `hash_table`. The iterator cannot handle multiple complex deletions. The example shows `extension_a` which refers to `extension_b` where both are to be deleted, a similar case can occur when `extension_b` refers to `extension_a`. Each case has to be handled the find extension function to prevent skipping entries or memory corruption. 
 
 ![safe deletion](./img/safe_deletion.svg)
 
 
 ## Future steps
 1. Parallelize _unitig_ creation
-2. Implement branch creation for _unitigs_, branch resolution will  yield _contigs_  
-3. Perform data analytics to determine percentage of _unitigs_ affected by extension
+2. Implement branch creation for _unitigs_; branch resolution will yield _contigs_  
+3. Perform data analytics to determine the percentage of _unitigs_ affected by extension
 4. Algorithm for variable length unitig extension
-
-<!--stackedit_data:
-eyJoaXN0b3J5IjpbMjkxNjEwNDE5LDE0MTE3MDMxMTQsOTI1MT
-UwMjk2LDE3NTMyNDA3OTQsLTcxNDcwOTQ4Nl19
--->
