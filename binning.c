@@ -1155,8 +1155,7 @@ int main(int argc, char *argv[])
     int read_id = 0;
 
     // get all the reads from file
-    // expecting read of length less than 20
-    while (fgets(read, 50, file) != NULL)
+    while (fgets(read, READ_LENGTH, file) != NULL)
     {
 
         // pre process and store read
